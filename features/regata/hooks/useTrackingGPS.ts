@@ -81,7 +81,16 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
 
     return () => {
       cancelado = true;
-      subscription?.remove();
+      // En web (expo-location 18), watchPositionAsync puede devolver un
+      // objeto sin método remove si la subscription aún no se materializó
+      // (StrictMode mount/unmount rápido). Cleanup defensivo.
+      try {
+        if (subscription && typeof subscription.remove === "function") {
+          subscription.remove();
+        }
+      } catch {
+        // ignorar — la subscription no estaba completamente inicializada
+      }
     };
   }, [activo]);
 
