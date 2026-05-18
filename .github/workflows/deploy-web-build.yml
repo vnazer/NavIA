@@ -1,0 +1,89 @@
+name: Build & publish a web-build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build static web (Expo Router)
+        run: npx expo export --platform web
+        env:
+          CI: "true"
+          # Asegura que Metro no busque flow types ni intente abrir el watcher
+          EXPO_NO_TYPESCRIPT_SETUP: "1"
+
+      - name: Add Apache fallback for client-side routing
+        run: |
+          cat > dist/.htaccess <<'EOF'
+          # NavIA — Apache rewrite para Expo Router (output: static)
+          # Hostinger usa Apache; este fallback evita 404 en rutas dinámicas
+          # como /bitacora/{id} sirviendo el index.html principal y dejando
+          # que el client-side router de Expo Router resuelva la ruta.
+
+          <IfModule mod_rewrite.c>
+            RewriteEngine On
+            RewriteBase /
+
+            # Si el archivo solicitado existe, servirlo tal cual.
+            RewriteCond %{REQUEST_FILENAME} -f [OR]
+            RewriteCond %{REQUEST_FILENAME} -d
+            RewriteRule ^ - [L]
+
+            # Para rutas dinámicas con id (ej. /bitacora/regata-xxx),
+            # caer al index.html de la ruta padre si existe.
+            RewriteRule ^bitacora/[^/]+/?$ /bitacora/index.html [L]
+
+            # Cualquier otra ruta sin match → root index.html (SPA fallback).
+            RewriteRule ^ /index.html [L]
+          </IfModule>
+
+          # MIME types correctos
+          <IfModule mod_mime.c>
+            AddType application/javascript .js
+            AddType application/json .json
+            AddType text/css .css
+            AddType image/svg+xml .svg
+          </IfModule>
+
+          # Cache largo para assets versionados de Expo (_expo/static/...)
+          <IfModule mod_expires.c>
+            ExpiresActive On
+            ExpiresByType text/html "access plus 0 seconds"
+            ExpiresByType text/css "access plus 1 year"
+            ExpiresByType application/javascript "access plus 1 year"
+            ExpiresByType image/png "access plus 1 month"
+            ExpiresByType image/jpeg "access plus 1 month"
+          </IfModule>
+          EOF
+
+      - name: Publish to web-build branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: web-build
+          force_orphan: true
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: "deploy: ${{ github.event.head_commit.message }}"
