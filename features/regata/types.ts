@@ -1,6 +1,7 @@
 // Tipos para tracking GPS y sesiones de regata.
 
 import type { PuntoPronostico } from "@/features/wind/types";
+import type { Boya } from "@/features/boyas/types";
 
 export type PuntoTrack = {
   /** Timestamp en ms unix */
@@ -28,6 +29,8 @@ export type Sesion = {
   spotId: string;
   /** Snapshot del viento al iniciar la sesión, para análisis posterior. */
   vientoSnapshot: PuntoPronostico | null;
+  /** Boyas del cuadro de regata al iniciar (copia editable del set del spot). */
+  boyasSnapshot: Boya[];
   puntos: PuntoTrack[];
 };
 

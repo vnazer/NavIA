@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { PuntoPronostico } from "@/features/wind/types";
+import type { Boya } from "@/features/boyas/types";
 import type { PuntoTrack, Sesion } from "../types";
 
 type RegataState = {
@@ -16,8 +17,11 @@ type RegataState = {
     barcoId: string;
     spotId: string;
     vientoSnapshot: PuntoPronostico | null;
+    boyasSnapshot: Boya[];
   }) => void;
   agregarPunto: (punto: PuntoTrack) => void;
+  /** Edita las boyas de la sesión activa (no afecta el set del spot). */
+  actualizarBoyasSesion: (boyas: Boya[]) => void;
   terminarSesion: () => void;
   eliminarSesion: (id: string) => void;
   getSesion: (id: string) => Sesion | null;
@@ -29,7 +33,13 @@ export const useRegataStore = create<RegataState>()(
       sesionActiva: null,
       sesionesHistoricas: [],
 
-      iniciarSesion: ({ nombre, barcoId, spotId, vientoSnapshot }) => {
+      iniciarSesion: ({
+        nombre,
+        barcoId,
+        spotId,
+        vientoSnapshot,
+        boyasSnapshot,
+      }) => {
         const sesion: Sesion = {
           id: `regata-${Date.now()}`,
           nombre,
@@ -38,6 +48,7 @@ export const useRegataStore = create<RegataState>()(
           barcoId,
           spotId,
           vientoSnapshot,
+          boyasSnapshot,
           puntos: [],
         };
         set({ sesionActiva: sesion });
@@ -51,6 +62,14 @@ export const useRegataStore = create<RegataState>()(
             ...actual,
             puntos: [...actual.puntos, punto],
           },
+        });
+      },
+
+      actualizarBoyasSesion: (boyas) => {
+        const actual = get().sesionActiva;
+        if (!actual) return;
+        set({
+          sesionActiva: { ...actual, boyasSnapshot: boyas },
         });
       },
 
@@ -84,6 +103,22 @@ export const useRegataStore = create<RegataState>()(
     {
       name: "navia-regata",
       storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      // Migration: garantizar que toda sesión persistida tenga boyasSnapshot
+      // (v1 no tenía este campo). Si una sesión vieja viene sin él, default [].
+      migrate: (persistedState: unknown, _version: number) => {
+        const state = persistedState as RegataState | null;
+        if (!state) return { sesionActiva: null, sesionesHistoricas: [] } as Partial<RegataState>;
+        const normalizar = (s: Sesion | null): Sesion | null =>
+          s ? { ...s, boyasSnapshot: s.boyasSnapshot ?? [] } : null;
+        return {
+          ...state,
+          sesionActiva: normalizar(state.sesionActiva),
+          sesionesHistoricas: (state.sesionesHistoricas ?? []).map(
+            (s) => normalizar(s) as Sesion,
+          ),
+        } as Partial<RegataState>;
+      },
     },
   ),
 );

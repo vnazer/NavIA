@@ -3,9 +3,16 @@
 
 import { useMemo, useCallback } from "react";
 import { ScrollView, View, Text, Pressable } from "react-native";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Play, Square, Navigation } from "lucide-react-native";
+import {
+  ChevronLeft,
+  Play,
+  Square,
+  Navigation,
+  Edit3,
+  MapPin,
+} from "lucide-react-native";
 import { SPOTS } from "@/features/spots/data/spots";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { useBarcoStore } from "@/features/polar/store/useBarcoStore";
@@ -14,6 +21,9 @@ import { useTrackingGPS } from "@/features/regata/hooks/useTrackingGPS";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { calcularRendimiento } from "@/features/regata/lib/calculosNavegacion";
 import { CardRendimiento } from "@/features/regata/components/CardRendimiento";
+import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
+import { MapaRegata } from "@/features/boyas/components/MapaRegata";
+import { ListaBoyasNavegacion } from "@/features/boyas/components/ListaBoyasNavegacion";
 
 export default function PantallaRegata() {
   const router = useRouter();
@@ -32,6 +42,10 @@ export default function PantallaRegata() {
   const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
   const terminarSesion = useRegataStore((s) => s.terminarSesion);
   const agregarPunto = useRegataStore((s) => s.agregarPunto);
+  const boyasSpot = useBoyasStore((s) => s.boyasPorSpot[spot.id] ?? []);
+  // Si hay sesión activa, usar las boyas snapshot (editables);
+  // si no, mostrar las del spot como preview.
+  const boyasActivas = sesion?.boyasSnapshot ?? boyasSpot;
 
   // Viento del momento (primer punto futuro del pronóstico)
   const vientoActual = useMemo(() => {
@@ -67,8 +81,13 @@ export default function PantallaRegata() {
       barcoId: barco.id,
       spotId: spot.id,
       vientoSnapshot: vientoActual,
+      boyasSnapshot: boyasSpot,
     });
-  }, [iniciarSesion, barco.id, spot.id, vientoActual]);
+  }, [iniciarSesion, barco.id, spot.id, vientoActual, boyasSpot]);
+
+  const posBarco = ultimoPunto
+    ? { lat: ultimoPunto.lat, lon: ultimoPunto.lon, cog: ultimoPunto.cogGrados }
+    : null;
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
@@ -90,6 +109,51 @@ export default function PantallaRegata() {
             <Text className="mt-1 text-xs text-mar-700">
               Viento: {Math.round(vientoActual.velocidadNudos)} kt desde{" "}
               {Math.round(vientoActual.direccionGrados)}°
+            </Text>
+          )}
+        </View>
+
+        {/* Boyas del cuadro de regata */}
+        <View className="gap-3 rounded-2xl bg-white p-4 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              <MapPin size={16} color="#ea580c" />
+              <Text className="text-sm font-semibold uppercase text-slate-700">
+                Boyas ({boyasActivas.length})
+              </Text>
+            </View>
+            <Link href="/boyas" asChild>
+              <Pressable className="flex-row items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5">
+                <Edit3 size={12} color="#334155" />
+                <Text className="text-xs font-semibold text-slate-700">
+                  Editar
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+
+          {boyasActivas.length > 0 ? (
+            <>
+              <MapaRegata
+                posBarco={posBarco}
+                boyas={boyasActivas}
+                fallback={{ lat: spot.lat, lon: spot.lon }}
+              />
+              <ListaBoyasNavegacion
+                boyas={boyasActivas}
+                posBarco={posBarco}
+              />
+              {sesion && (
+                <Text className="text-xs text-slate-500">
+                  Editando snapshot de la sesión activa — no afecta las
+                  predeterminadas del spot.
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text className="text-sm text-slate-500">
+              No hay boyas cargadas. Tap &quot;Editar&quot; para pegar las
+              coordenadas que envió el juez.
             </Text>
           )}
         </View>
