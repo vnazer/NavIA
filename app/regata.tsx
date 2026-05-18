@@ -54,8 +54,8 @@ export default function PantallaRegata() {
     if (!ultimoPunto || !vientoActual) return null;
     return calcularRendimiento(
       barco.polar,
-      ultimoPunto.cog,
-      ultimoPunto.sog,
+      ultimoPunto.cogGrados,
+      ultimoPunto.sogKts,
       vientoActual.direccionGrados,
       vientoActual.velocidadNudos,
     );
@@ -66,8 +66,9 @@ export default function PantallaRegata() {
       nombre: `Regata ${new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}`,
       barcoId: barco.id,
       spotId: spot.id,
+      vientoSnapshot: vientoActual,
     });
-  }, [iniciarSesion, barco.id, spot.id]);
+  }, [iniciarSesion, barco.id, spot.id, vientoActual]);
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
@@ -111,7 +112,7 @@ export default function PantallaRegata() {
           >
             <Square size={18} color="white" />
             <Text className="text-base font-semibold text-white">
-              Terminar regata
+              Finalizar y guardar
             </Text>
           </Pressable>
         )}
@@ -138,18 +139,14 @@ export default function PantallaRegata() {
                 <View className="flex-1 rounded-lg bg-mar-50 p-3">
                   <Text className="text-xs uppercase text-mar-700">SOG</Text>
                   <Text className="mt-1 text-2xl font-bold text-slate-900">
-                    {ultimoPunto.sog != null
-                      ? ultimoPunto.sog.toFixed(1)
-                      : "—"}
+                    {ultimoPunto.sogKts.toFixed(1)}
                   </Text>
                   <Text className="text-xs text-slate-600">nudos</Text>
                 </View>
                 <View className="flex-1 rounded-lg bg-mar-50 p-3">
                   <Text className="text-xs uppercase text-mar-700">COG</Text>
                   <Text className="mt-1 text-2xl font-bold text-slate-900">
-                    {ultimoPunto.cog != null
-                      ? Math.round(ultimoPunto.cog) + "°"
-                      : "—"}
+                    {Math.round(ultimoPunto.cogGrados)}°
                   </Text>
                   <Text className="text-xs text-slate-600">rumbo</Text>
                 </View>
@@ -184,7 +181,7 @@ export default function PantallaRegata() {
             </Text>
             <Text className="mt-1 text-xs text-slate-600">
               {sesion.puntos.length} puntos GPS registrados ·{" "}
-              {duracionMinutos(sesion.iniciadaEn)} min
+              {duracionMinutos(sesion.fechaInicio)} min
             </Text>
           </View>
         )}

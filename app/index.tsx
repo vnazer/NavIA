@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, RefreshCw, Map, Navigation } from "lucide-react-native";
+import { MapPin, RefreshCw, Map, Play, BookOpen } from "lucide-react-native";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
@@ -109,17 +109,23 @@ export default function PantallaPrincipal() {
           <View className="flex-row gap-2">
             <Link href="/mapa" asChild>
               <Pressable className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-mar-500 p-3">
-                <Map size={18} color="#ffffff" />
-                <Text className="text-sm font-semibold text-white">
-                  Ver mapa
-                </Text>
+                <Map size={16} color="#ffffff" />
+                <Text className="text-xs font-semibold text-white">Mapa</Text>
               </Pressable>
             </Link>
             <Link href="/regata" asChild>
-              <Pressable className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-mar-700 p-3">
-                <Navigation size={18} color="#ffffff" />
-                <Text className="text-sm font-semibold text-white">
+              <Pressable className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-emerald-600 p-3">
+                <Play size={16} color="#ffffff" />
+                <Text className="text-xs font-semibold text-white">
                   Regata
+                </Text>
+              </Pressable>
+            </Link>
+            <Link href="/bitacora" asChild>
+              <Pressable className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-slate-700 p-3">
+                <BookOpen size={16} color="#ffffff" />
+                <Text className="text-xs font-semibold text-white">
+                  Bitácora
                 </Text>
               </Pressable>
             </Link>

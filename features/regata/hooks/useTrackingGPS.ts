@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import * as Location from "expo-location";
-import type { PuntoGPS } from "../types";
+import type { PuntoTrack } from "../types";
 
 type EstadoPermiso = "pendiente" | "concedido" | "denegado";
 
@@ -12,12 +12,12 @@ type Opciones = {
   /** Si está activo, el hook subscribe al GPS. */
   activo: boolean;
   /** Callback llamado cada vez que llega un punto nuevo. */
-  onPunto?: (p: PuntoGPS) => void;
+  onPunto?: (p: PuntoTrack) => void;
 };
 
 export function useTrackingGPS({ activo, onPunto }: Opciones) {
   const [permiso, setPermiso] = useState<EstadoPermiso>("pendiente");
-  const [ultimoPunto, setUltimoPunto] = useState<PuntoGPS | null>(null);
+  const [ultimoPunto, setUltimoPunto] = useState<PuntoTrack | null>(null);
   const [error, setError] = useState<string | null>(null);
   const onPuntoRef = useRef(onPunto);
   onPuntoRef.current = onPunto;
@@ -43,27 +43,27 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
         subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 1000, // cada segundo
-            distanceInterval: 1, // o cada 1m
+            timeInterval: 1000,
+            distanceInterval: 1,
           },
           (loc) => {
             // speed viene en m/s, convertir a nudos (1 m/s = 1.9438 kt)
-            const sogKt =
+            const sogKts =
               loc.coords.speed != null && loc.coords.speed >= 0
                 ? loc.coords.speed * 1.9438
-                : null;
+                : 0;
             // heading viene en grados 0-360, -1 si no disponible
-            const cog =
+            const cogGrados =
               loc.coords.heading != null && loc.coords.heading >= 0
                 ? loc.coords.heading
-                : null;
+                : 0;
 
-            const punto: PuntoGPS = {
-              timestamp: loc.timestamp,
+            const punto: PuntoTrack = {
+              ts: loc.timestamp,
               lat: loc.coords.latitude,
               lon: loc.coords.longitude,
-              sog: sogKt,
-              cog,
+              sogKts,
+              cogGrados,
               precisionMetros: loc.coords.accuracy ?? null,
             };
             setUltimoPunto(punto);

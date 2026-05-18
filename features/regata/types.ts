@@ -1,32 +1,37 @@
 // Tipos para tracking GPS y sesiones de regata.
 
-export type PuntoGPS = {
-  timestamp: number; // ms unix
+import type { PuntoPronostico } from "@/features/wind/types";
+
+export type PuntoTrack = {
+  /** Timestamp en ms unix */
+  ts: number;
   lat: number;
   lon: number;
-  /** Velocidad sobre fondo en nudos (Speed Over Ground). null si no disponible. */
-  sog: number | null;
-  /** Rumbo sobre fondo en grados (Course Over Ground), 0-360. null si parado. */
-  cog: number | null;
+  /** Velocidad sobre fondo en nudos (Speed Over Ground). 0 si parado. */
+  sogKts: number;
+  /** Rumbo sobre fondo en grados (Course Over Ground), 0-360. 0 si parado. */
+  cogGrados: number;
   /** Precisión horizontal en metros. */
   precisionMetros: number | null;
 };
 
-export type SesionRegata = {
+export type Sesion = {
   id: string;
   nombre: string;
   /** ms unix al iniciar */
-  iniciadaEn: number;
+  fechaInicio: number;
   /** ms unix al terminar. null si está activa. */
-  terminadaEn: number | null;
+  fechaFin: number | null;
   /** Snapshot del barco activo al momento de iniciar */
   barcoId: string;
   /** Snapshot del spot activo */
   spotId: string;
-  puntos: PuntoGPS[];
+  /** Snapshot del viento al iniciar la sesión, para análisis posterior. */
+  vientoSnapshot: PuntoPronostico | null;
+  puntos: PuntoTrack[];
 };
 
-/** Cálculo de eficiencia respecto al polar. */
+/** Cálculo de eficiencia respecto al polar (en vivo durante la regata). */
 export type Rendimiento = {
   /** Ángulo al viento real (TWA) estimado, 0-180 */
   twa: number;
