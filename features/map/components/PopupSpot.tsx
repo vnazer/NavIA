@@ -1,19 +1,28 @@
-// Contenido HTML del popup que aparece al tappear un marcador de spot.
-// Importante: este componente renderiza dentro de un L.Popup de Leaflet,
-// que usa DOM nativo (NO React Native). Por eso usamos <div>, <h3>, etc.,
-// y NO los primitivos de RN. Funciona solo en web.
+// Popup que se abre al tappear un marker de spot en el mapa.
+// MODIFICADO EN PROMPT 3.2: muestra datos de viento si el spot es el actual
+// (y por ende tenemos su pronóstico cargado).
 
 import { useRouter } from "expo-router";
+import { beaufortDesdeNudos } from "@/lib/beaufort";
+import { formatearDireccion } from "@/lib/nautica";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
-import type { PropsMarcador } from "../types";
+import type { Spot } from "@/features/spots/types";
+import type { PuntoPronostico } from "@/features/wind/types";
 
-export function PopupSpot({ spot, esActual }: PropsMarcador) {
+type Props = {
+  spot: Spot;
+  esActual: boolean;
+  /** Punto del pronóstico para la hora del slider. Solo se pasa para el spot actual. */
+  punto?: PuntoPronostico | null;
+};
+
+export function PopupSpot({ spot, esActual, punto }: Props) {
   const router = useRouter();
   const setSpotId = useSpotStore((s) => s.setSpotId);
+  const beaufort = punto ? beaufortDesdeNudos(punto.velocidadNudos) : null;
 
   const seleccionar = () => {
     setSpotId(spot.id);
-    // Volver a la pantalla principal para ver el pronóstico actualizado
     router.back();
   };
 
@@ -47,6 +56,46 @@ export function PopupSpot({ spot, esActual }: PropsMarcador) {
         }}>
           {spot.notas}
         </p>
+      )}
+
+      {/* Bloque de viento - solo si tenemos datos (spot actual) */}
+      {esActual && punto && beaufort && (
+        <div
+          style={{
+            marginTop: 10,
+            paddingTop: 10,
+            borderTop: "1px solid #e2e8f0",
+          }}
+        >
+          <div style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 4,
+          }}>
+            <span style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#0f172a",
+            }}>
+              {Math.round(punto.velocidadNudos)}
+            </span>
+            <span style={{ fontSize: 12, color: "#64748b" }}>kt</span>
+            <span style={{ fontSize: 11, color: "#64748b", marginLeft: 6 }}>
+              · Rachas {Math.round(punto.rachasNudos)} kt
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: "#334155", marginTop: 2 }}>
+            {formatearDireccion(punto.direccionGrados)}
+          </div>
+          <div style={{
+            fontSize: 11,
+            color: "#64748b",
+            marginTop: 2,
+            fontStyle: "italic",
+          }}>
+            Fuerza {beaufort.fuerza} · {beaufort.nombre}
+          </div>
+        </div>
       )}
 
       {esActual ? (

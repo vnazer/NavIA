@@ -3,8 +3,9 @@
 // accede a `window` al evaluar sus módulos y rompería el SSR estático
 // que hace Expo Router con `output: static`.
 //
-// MODIFICADO EN PROMPT 3: capa de viento (grid de flechas), slider temporal
-// y toggle para encender/apagar.
+// MODIFICADO EN PROMPT 3.2: agrega card flotante con viento del spot seleccionado
+// y enriquece el popup del spot actual con datos de viento. Usa dos hooks de
+// pronóstico: uno para el grid de flechas, otro puntual para el spot actual.
 
 import "leaflet/dist/leaflet.css";
 import { useState } from "react";
@@ -12,29 +13,49 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { SPOTS } from "@/features/spots/data/spots";
 import { usePronosticoGrid } from "@/features/wind/hooks/usePronosticoGrid";
+import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { CapaVientoMapa } from "@/features/wind/components/CapaVientoMapa";
 import { MAPA_CONFIG, TILES } from "../data/config";
 import { iconoSpot } from "./iconos";
 import { PopupSpot } from "./PopupSpot";
 import { SelectorHora } from "./SelectorHora";
 import { ControlCapaViento } from "./ControlCapaViento";
+import { CardVientoSpot } from "./CardVientoSpot";
 
 export default function MapaSpotsInterno() {
   const spotIdActual = useSpotStore((s) => s.spotIdSeleccionado);
-  const { pronostico } = usePronosticoGrid();
+  const spotActual = useSpotStore((s) => s.getSpotActual());
 
-  // Estado UI: índice de hora seleccionada (0 = ahora) y visibilidad de capa
+  // Pronóstico GRID para las flechas distribuidas
+  const { pronostico: pronosticoGrid } = usePronosticoGrid();
+
+  // Pronóstico PUNTUAL del spot actual para la card flotante y el popup
+  const { pronostico: pronosticoSpot } = usePronosticoViento();
+
   const [indiceHora, setIndiceHora] = useState(0);
   const [capaVientoVisible, setCapaVientoVisible] = useState(true);
 
-  // Calcular máximo del slider en base a las horas disponibles del primer punto
-  const maximoHoras = pronostico?.puntos[0]?.puntos.length
-    ? pronostico.puntos[0].puntos.length - 1
+  const maximoHoras = pronosticoGrid?.puntos[0]?.puntos.length
+    ? pronosticoGrid.puntos[0].puntos.length - 1
     : 47;
 
-  // Timestamp del punto actualmente seleccionado (para mostrar en slider)
-  const timestampActual =
-    pronostico?.puntos[0]?.puntos[indiceHora]?.hora;
+  // Timestamp seleccionado por el slider (referencia: punto 0 del grid)
+  const timestampSeleccionado =
+    pronosticoGrid?.puntos[0]?.puntos[indiceHora]?.hora;
+
+  // Buscar el punto del pronóstico del spot que matchee el timestamp del slider.
+  // Por seguridad usamos timestamp en vez de índice (los arrays deberían
+  // alinearse pero esto es robusto a discrepancias).
+  const puntoSpotEnHora = (() => {
+    if (!pronosticoSpot || !timestampSeleccionado) return null;
+    return (
+      pronosticoSpot.puntos.find((p) => p.hora === timestampSeleccionado) ??
+      pronosticoSpot.puntos[indiceHora] ??
+      null
+    );
+  })();
+
+  const esAhora = indiceHora === 0;
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
@@ -49,26 +70,21 @@ export default function MapaSpotsInterno() {
         style={{ height: "100%", width: "100%", minHeight: 500 }}
         scrollWheelZoom={true}
       >
-        {/* Capa base topográfica */}
         <TileLayer
           url={TILES.base.url}
           attribution={TILES.base.atribucion}
         />
-
-        {/* Capa náutica OpenSeaMap */}
         <TileLayer
           url={TILES.seamark.url}
           attribution={TILES.seamark.atribucion}
         />
 
-        {/* Capa de viento (grid de flechas) */}
         <CapaVientoMapa
-          pronostico={pronostico}
+          pronostico={pronosticoGrid}
           indiceHora={indiceHora}
           visible={capaVientoVisible}
         />
 
-        {/* Marcadores de los 6 spots */}
         {SPOTS.map((spot) => {
           const esActual = spot.id === spotIdActual;
           return (
@@ -78,7 +94,11 @@ export default function MapaSpotsInterno() {
               icon={iconoSpot(esActual)}
             >
               <Popup>
-                <PopupSpot spot={spot} esActual={esActual} />
+                <PopupSpot
+                  spot={spot}
+                  esActual={esActual}
+                  punto={esActual ? puntoSpotEnHora : null}
+                />
               </Popup>
             </Marker>
           );
@@ -91,12 +111,19 @@ export default function MapaSpotsInterno() {
         onToggle={() => setCapaVientoVisible(!capaVientoVisible)}
       />
 
-      {/* Slider temporal (parte inferior centrada) - solo si hay data */}
-      {pronostico && capaVientoVisible && (
+      {/* Card flotante: siempre visible con el viento del spot seleccionado */}
+      <CardVientoSpot
+        spot={spotActual}
+        punto={puntoSpotEnHora}
+        esAhora={esAhora}
+      />
+
+      {/* Slider temporal */}
+      {pronosticoGrid && capaVientoVisible && (
         <SelectorHora
           indice={indiceHora}
           maximo={maximoHoras}
-          timestampActual={timestampActual}
+          timestampActual={timestampSeleccionado}
           onCambio={setIndiceHora}
         />
       )}

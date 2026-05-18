@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { beaufortDesdeNudos } from "@/lib/beaufort";
 import { formatearDireccion } from "@/lib/nautica";
+import { hexDesdeTailwind } from "@/lib/colores";
 
 type Props = {
   lat: number;
@@ -23,22 +24,6 @@ function largoFlecha(nudos: number): number {
   const escalaMax = 30;
   return minPx + Math.min(nudos / escalaMax, 1) * (maxPx - minPx);
 }
-
-const COLORES: Record<string, string> = {
-  "bg-slate-200":   "#e2e8f0",
-  "bg-sky-200":     "#bae6fd",
-  "bg-sky-300":     "#7dd3fc",
-  "bg-emerald-400": "#34d399",
-  "bg-emerald-500": "#10b981",
-  "bg-amber-400":   "#fbbf24",
-  "bg-orange-500":  "#f97316",
-  "bg-red-500":     "#ef4444",
-  "bg-red-700":     "#b91c1c",
-  "bg-red-800":     "#991b1b",
-  "bg-purple-700":  "#7e22ce",
-  "bg-purple-900":  "#581c87",
-  "bg-black":       "#000000",
-};
 
 function generarSVG(
   largoPx: number,
@@ -91,7 +76,7 @@ export function FlechaViento({
   hora,
 }: Props) {
   const beaufort = beaufortDesdeNudos(velocidadNudos);
-  const color = COLORES[beaufort.colorTw] ?? "#0a4d7a";
+  const color = hexDesdeTailwind(beaufort.colorTw);
   const largo = largoFlecha(velocidadNudos);
   const html = generarSVG(largo, direccionGrados, color);
 
