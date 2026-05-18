@@ -20,6 +20,7 @@ import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
 import { ListaPronostico } from "@/features/wind/components/ListaPronostico";
+import { CardPerformance } from "@/features/polar/components/CardPerformance";
 
 export default function PantallaPrincipal() {
   // Derivar el spot actual desde primitivos del store para evitar loops
@@ -148,6 +149,9 @@ export default function PantallaPrincipal() {
             label={labelBloque}
           />
         )}
+
+        {/* NUEVO en Prompt 4: card de performance del barco */}
+        {puntoSeleccionado && <CardPerformance punto={puntoSeleccionado} />}
 
         {/* Botón "volver a ahora" si la selección no es ahora */}
         {!esAhora && indiceAhora !== null && (

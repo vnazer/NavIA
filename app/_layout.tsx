@@ -18,6 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: "NavIA" }} />
         <Stack.Screen name="spots" options={{ title: "Elegir spot" }} />
         <Stack.Screen name="mapa" options={{ title: "Mapa de spots" }} />
+        <Stack.Screen name="polar" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );
