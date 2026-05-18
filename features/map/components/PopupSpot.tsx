@@ -1,8 +1,7 @@
 // Popup que se abre al tappear un marker de spot en el mapa.
-// MODIFICADO EN PROMPT 3.2: muestra datos de viento si el spot es el actual
-// (y por ende tenemos su pronóstico cargado).
+// MODIFICADO EN PROMPT 3.6: muestra badge si el spot tiene coordenada personalizada
+// y botón para resetear al default.
 
-import { useRouter } from "expo-router";
 import { beaufortDesdeNudos } from "@/lib/beaufort";
 import { formatearDireccion } from "@/lib/nautica";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
@@ -12,71 +11,45 @@ import type { PuntoPronostico } from "@/features/wind/types";
 type Props = {
   spot: Spot;
   esActual: boolean;
-  /** Punto del pronóstico para la hora del slider. Solo se pasa para el spot actual. */
   punto?: PuntoPronostico | null;
 };
 
 export function PopupSpot({ spot, esActual, punto }: Props) {
-  const router = useRouter();
-  const setSpotId = useSpotStore((s) => s.setSpotId);
+  const seleccionar = useSpotStore((s) => s.seleccionarSpot);
+  const tieneOverride = useSpotStore((s) => s.tieneOverride(spot.id));
+  const resetOverride = useSpotStore((s) => s.resetOverride);
   const beaufort = punto ? beaufortDesdeNudos(punto.velocidadNudos) : null;
-
-  const seleccionar = () => {
-    setSpotId(spot.id);
-    router.back();
-  };
 
   return (
     <div style={{ minWidth: 220, fontFamily: "system-ui, sans-serif" }}>
-      <h3 style={{
-        margin: 0,
-        fontWeight: 600,
-        fontSize: 16,
-        color: "#0f172a",
-      }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
         {spot.nombre}
-      </h3>
-
+      </div>
       {spot.club && (
-        <p style={{
-          margin: "4px 0 0",
-          fontSize: 12,
-          color: "#64748b",
-        }}>
+        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
           {spot.club}
-        </p>
+        </div>
       )}
-
-      {spot.notas && (
-        <p style={{
-          margin: "10px 0 0",
+      {spot.descripcion && (
+        <div style={{
           fontSize: 12,
-          color: "#334155",
-          lineHeight: 1.5,
+          color: "#475569",
+          marginTop: 8,
+          lineHeight: 1.4,
         }}>
-          {spot.notas}
-        </p>
+          {spot.descripcion}
+        </div>
       )}
 
-      {/* Bloque de viento - solo si tenemos datos (spot actual) */}
+      {/* Bloque de viento (solo spot actual con datos) */}
       {esActual && punto && beaufort && (
-        <div
-          style={{
-            marginTop: 10,
-            paddingTop: 10,
-            borderTop: "1px solid #e2e8f0",
-          }}
-        >
-          <div style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 4,
-          }}>
-            <span style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: "#0f172a",
-            }}>
+        <div style={{
+          marginTop: 10,
+          paddingTop: 10,
+          borderTop: "1px solid #e2e8f0",
+        }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: "#0f172a" }}>
               {Math.round(punto.velocidadNudos)}
             </span>
             <span style={{ fontSize: 12, color: "#64748b" }}>kt</span>
@@ -98,34 +71,77 @@ export function PopupSpot({ spot, esActual, punto }: Props) {
         </div>
       )}
 
-      {esActual ? (
-        <p style={{
-          margin: "12px 0 0",
-          fontSize: 11,
-          color: "#0a4d7a",
-          fontWeight: 600,
-        }}>
-          ✓ Spot actualmente seleccionado
-        </p>
-      ) : (
-        <button
-          onClick={seleccionar}
-          style={{
-            marginTop: 12,
-            padding: "8px 14px",
-            backgroundColor: "#0a4d7a",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            fontSize: 13,
+      {/* Coordenadas + estado de personalización */}
+      <div style={{
+        marginTop: 10,
+        paddingTop: 10,
+        borderTop: "1px solid #e2e8f0",
+        fontSize: 11,
+        color: "#64748b",
+        fontFamily: "monospace",
+      }}>
+        {spot.lat.toFixed(4)}, {spot.lon.toFixed(4)}
+        {tieneOverride && (
+          <span style={{
+            marginLeft: 8,
+            padding: "2px 6px",
+            backgroundColor: "#fef3c7",
+            color: "#92400e",
+            borderRadius: 4,
+            fontFamily: "system-ui",
             fontWeight: 600,
-            cursor: "pointer",
-            width: "100%",
-          }}
-        >
-          Seleccionar este spot
-        </button>
-      )}
+          }}>
+            personalizada
+          </span>
+        )}
+      </div>
+
+      {/* Acciones */}
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {esActual ? (
+          <span style={{
+            fontSize: 12,
+            color: "#0a4d7a",
+            fontWeight: 600,
+            alignSelf: "center",
+          }}>
+            ✓ Seleccionado
+          </span>
+        ) : (
+          <button
+            onClick={() => seleccionar(spot.id)}
+            style={{
+              backgroundColor: "#0a4d7a",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Seleccionar
+          </button>
+        )}
+        {tieneOverride && (
+          <button
+            onClick={() => resetOverride(spot.id)}
+            style={{
+              backgroundColor: "#f3f4f6",
+              color: "#374151",
+              border: "1px solid #d1d5db",
+              borderRadius: 6,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Resetear a default
+          </button>
+        )}
+      </div>
     </div>
   );
 }

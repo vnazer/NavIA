@@ -8,10 +8,10 @@ import { useSpotStore } from "@/features/spots/store/useSpotStore";
 export default function PantallaSpots() {
   const router = useRouter();
   const spotIdActual = useSpotStore((s) => s.spotIdSeleccionado);
-  const setSpotId = useSpotStore((s) => s.setSpotId);
+  const seleccionarSpot = useSpotStore((s) => s.seleccionarSpot);
 
   const seleccionar = (id: string) => {
-    setSpotId(id);
+    seleccionarSpot(id);
     router.back();
   };
 
@@ -44,13 +44,13 @@ export default function PantallaSpots() {
                   {spot.club}
                 </Text>
               )}
-              {spot.notas && (
+              {spot.descripcion && (
                 <Text
                   className={`mt-1 text-xs ${
                     esActual ? "text-mar-100" : "text-slate-600"
                   }`}
                 >
-                  {spot.notas}
+                  {spot.descripcion}
                 </Text>
               )}
             </View>

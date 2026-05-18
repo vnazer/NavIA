@@ -3,15 +3,15 @@
 // accede a `window` al evaluar sus módulos y rompería el SSR estático
 // que hace Expo Router con `output: static`.
 //
-// MODIFICADO EN PROMPT 3.3: el slider arranca en el índice "AHORA" real
-// (primer punto futuro del pronóstico), no en el índice 0 que es 00:00 del día.
-// Agrega botón flotante "Volver a AHORA" cuando el usuario se desvía del momento actual.
+// MODIFICADO EN PROMPT 3.6: agrega modo edición. Cuando está activo, los
+// marcadores de spots son arrastrables. Al soltar, se guarda la coordenada
+// como override en AsyncStorage.
 
 import "leaflet/dist/leaflet.css";
 import { useState, useMemo, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
-import { SPOTS } from "@/features/spots/data/spots";
 import { usePronosticoGrid } from "@/features/wind/hooks/usePronosticoGrid";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { CapaVientoMapa } from "@/features/wind/components/CapaVientoMapa";
@@ -20,23 +20,22 @@ import { iconoSpot } from "./iconos";
 import { PopupSpot } from "./PopupSpot";
 import { SelectorHora } from "./SelectorHora";
 import { ControlCapaViento } from "./ControlCapaViento";
+import { ControlModoEdicion } from "./ControlModoEdicion";
 import { CardVientoSpot } from "./CardVientoSpot";
 
 export default function MapaSpotsInterno() {
   const spotIdActual = useSpotStore((s) => s.spotIdSeleccionado);
   const spotActual = useSpotStore((s) => s.getSpotActual());
+  const todosLosSpots = useSpotStore((s) => s.getTodosLosSpots());
+  const setOverride = useSpotStore((s) => s.setOverride);
 
   const { pronostico: pronosticoGrid } = usePronosticoGrid();
   const { pronostico: pronosticoSpot } = usePronosticoViento();
 
-  // Slider: empieza en null hasta que sepamos el índice "AHORA" del pronóstico
   const [indiceHora, setIndiceHora] = useState<number | null>(null);
   const [capaVientoVisible, setCapaVientoVisible] = useState(true);
+  const [modoEdicion, setModoEdicion] = useState(false);
 
-  // Calcular el índice del primer punto futuro del pronóstico del grid.
-  // El array empieza desde las 00:00 del día actual, así que si son las 21:00
-  // el "ahora real" es el índice 21. Restamos 1 hora para incluir el punto
-  // que ya está corriendo (no descartar la hora en curso).
   const indiceAhora = useMemo(() => {
     if (!pronosticoGrid?.puntos[0]?.puntos.length) return null;
     const ahoraTs = Date.now() - 60 * 60 * 1000;
@@ -46,7 +45,6 @@ export default function MapaSpotsInterno() {
     return idx === -1 ? 0 : idx;
   }, [pronosticoGrid]);
 
-  // Cuando llega el pronóstico, inicializar el slider en "AHORA"
   useEffect(() => {
     if (indiceAhora !== null && indiceHora === null) {
       setIndiceHora(indiceAhora);
@@ -57,13 +55,11 @@ export default function MapaSpotsInterno() {
     ? pronosticoGrid.puntos[0].puntos.length - 1
     : 47;
 
-  // Valor seguro para usar en componentes que esperan number
   const indiceHoraSeguro = indiceHora ?? indiceAhora ?? 0;
 
   const timestampSeleccionado =
     pronosticoGrid?.puntos[0]?.puntos[indiceHoraSeguro]?.hora;
 
-  // Buscar el punto del pronóstico del spot por timestamp (más robusto que por índice)
   const puntoSpotEnHora = (() => {
     if (!pronosticoSpot || !timestampSeleccionado) return null;
     return (
@@ -73,45 +69,46 @@ export default function MapaSpotsInterno() {
     );
   })();
 
-  // "Es ahora" = el índice coincide con el índice de la hora actual real
   const esAhora =
     indiceAhora !== null && indiceHoraSeguro === indiceAhora;
+
+  // Handler para cuando se suelta un marcador arrastrado
+  const handleDragEnd = (spotId: string) => (e: L.LeafletEvent) => {
+    const target = e.target as L.Marker;
+    const { lat, lng } = target.getLatLng();
+    setOverride(spotId, lat, lng);
+  };
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <MapContainer
-        center={[
-          MAPA_CONFIG.centroInicial.lat,
-          MAPA_CONFIG.centroInicial.lon,
-        ]}
+        center={[MAPA_CONFIG.centroInicial.lat, MAPA_CONFIG.centroInicial.lon]}
         zoom={MAPA_CONFIG.zoomInicial}
         minZoom={MAPA_CONFIG.zoomMin}
         maxZoom={MAPA_CONFIG.zoomMax}
         style={{ height: "100%", width: "100%", minHeight: 500 }}
         scrollWheelZoom={true}
       >
-        <TileLayer
-          url={TILES.base.url}
-          attribution={TILES.base.atribucion}
-        />
-        <TileLayer
-          url={TILES.seamark.url}
-          attribution={TILES.seamark.atribucion}
-        />
+        <TileLayer url={TILES.base.url} attribution={TILES.base.atribucion} />
+        <TileLayer url={TILES.seamark.url} attribution={TILES.seamark.atribucion} />
 
         <CapaVientoMapa
           pronostico={pronosticoGrid}
           indiceHora={indiceHoraSeguro}
-          visible={capaVientoVisible}
+          visible={capaVientoVisible && !modoEdicion}
         />
 
-        {SPOTS.map((spot) => {
+        {todosLosSpots.map((spot) => {
           const esActual = spot.id === spotIdActual;
           return (
             <Marker
               key={spot.id}
               position={[spot.lat, spot.lon]}
               icon={iconoSpot(esActual)}
+              draggable={modoEdicion}
+              eventHandlers={{
+                dragend: handleDragEnd(spot.id),
+              }}
             >
               <Popup>
                 <PopupSpot
@@ -130,19 +127,45 @@ export default function MapaSpotsInterno() {
         onToggle={() => setCapaVientoVisible(!capaVientoVisible)}
       />
 
-      <CardVientoSpot
-        spot={spotActual}
-        punto={puntoSpotEnHora}
-        esAhora={esAhora}
+      <ControlModoEdicion
+        activo={modoEdicion}
+        onToggle={() => setModoEdicion(!modoEdicion)}
       />
 
-      {/* Botón "Volver a AHORA" - solo visible cuando se desvió del momento actual */}
-      {!esAhora && indiceAhora !== null && (
+      {/* Banner instructivo cuando modo edición está activo */}
+      {modoEdicion && (
+        <div style={{
+          position: "absolute",
+          top: 16,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          backgroundColor: "#dc2626",
+          color: "white",
+          padding: "8px 16px",
+          borderRadius: 999,
+          fontSize: 13,
+          fontWeight: 600,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+        }}>
+          🎯 Arrastrá cada marcador a la ubicación correcta del club
+        </div>
+      )}
+
+      {!modoEdicion && (
+        <CardVientoSpot
+          spot={spotActual}
+          punto={puntoSpotEnHora}
+          esAhora={esAhora}
+        />
+      )}
+
+      {!esAhora && indiceAhora !== null && !modoEdicion && (
         <button
           onClick={() => setIndiceHora(indiceAhora)}
           style={{
             position: "absolute",
-            bottom: 110, // arriba del slider
+            bottom: 110,
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 1000,
@@ -161,14 +184,17 @@ export default function MapaSpotsInterno() {
         </button>
       )}
 
-      {pronosticoGrid && capaVientoVisible && indiceHora !== null && (
-        <SelectorHora
-          indice={indiceHora}
-          maximo={maximoHoras}
-          timestampActual={timestampSeleccionado}
-          onCambio={setIndiceHora}
-        />
-      )}
+      {pronosticoGrid &&
+        capaVientoVisible &&
+        indiceHora !== null &&
+        !modoEdicion && (
+          <SelectorHora
+            indice={indiceHora}
+            maximo={maximoHoras}
+            timestampActual={timestampSeleccionado}
+            onCambio={setIndiceHora}
+          />
+        )}
     </div>
   );
 }
