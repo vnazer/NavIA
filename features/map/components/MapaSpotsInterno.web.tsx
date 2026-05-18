@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { SPOTS } from "@/features/spots/data/spots";
 import { usePronosticoGrid } from "@/features/wind/hooks/usePronosticoGrid";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { CapaVientoMapa } from "@/features/wind/components/CapaVientoMapa";
@@ -25,9 +26,25 @@ import { CardVientoSpot } from "./CardVientoSpot";
 
 export default function MapaSpotsInterno() {
   const spotIdActual = useSpotStore((s) => s.spotIdSeleccionado);
-  const spotActual = useSpotStore((s) => s.getSpotActual());
-  const todosLosSpots = useSpotStore((s) => s.getTodosLosSpots());
+  const overrides = useSpotStore((s) => s.overrides);
   const setOverride = useSpotStore((s) => s.setOverride);
+
+  // Derivar spots con overrides aplicados (memo en deps primitivas para
+  // evitar loops infinitos — el selector que retorna array nuevo causa
+  // "Maximum update depth exceeded" porque Zustand compara por Object.is).
+  const todosLosSpots = useMemo(
+    () =>
+      SPOTS.map((s) => {
+        const ov = overrides[s.id];
+        return ov ? { ...s, lat: ov.lat, lon: ov.lon } : s;
+      }),
+    [overrides],
+  );
+
+  const spotActual = useMemo(
+    () => todosLosSpots.find((s) => s.id === spotIdActual) ?? todosLosSpots[0],
+    [todosLosSpots, spotIdActual],
+  );
 
   const { pronostico: pronosticoGrid } = usePronosticoGrid();
   const { pronostico: pronosticoSpot } = usePronosticoViento();

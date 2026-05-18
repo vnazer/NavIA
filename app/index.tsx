@@ -3,6 +3,7 @@
 // las cards de Próximas 48h. El bloque AHORA se actualiza con la hora elegida.
 
 import { useState, useMemo, useEffect } from "react";
+import { SPOTS } from "@/features/spots/data/spots";
 import {
   ScrollView,
   View,
@@ -21,7 +22,17 @@ import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondic
 import { ListaPronostico } from "@/features/wind/components/ListaPronostico";
 
 export default function PantallaPrincipal() {
-  const spot = useSpotStore((s) => s.getSpotActual());
+  // Derivar el spot actual desde primitivos del store para evitar loops
+  // de re-render (un selector que devuelve {...spread} causa Maximum
+  // update depth exceeded porque Zustand compara por Object.is).
+  const spotId = useSpotStore((s) => s.spotIdSeleccionado);
+  const overrides = useSpotStore((s) => s.overrides);
+  const spot = useMemo(() => {
+    const base = SPOTS.find((s) => s.id === spotId) ?? SPOTS[0];
+    const ov = overrides[base.id];
+    return ov ? { ...base, lat: ov.lat, lon: ov.lon } : base;
+  }, [spotId, overrides]);
+
   const { pronostico, cargando, error, recargar } = usePronosticoViento();
 
   // Estado: índice de la hora seleccionada en el array de puntos.

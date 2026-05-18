@@ -1,8 +1,15 @@
 // Hook para consumir pronóstico del spot actualmente seleccionado.
 // Implementa cache simple en memoria + AsyncStorage para uso offline.
-import { useEffect, useState, useCallback } from "react";
+//
+// FIX en Prompt 3.6.1: suscripción a `spotIdSeleccionado` + `overrides` por
+// separado y derivación con useMemo. Usar `useSpotStore(s => s.getSpotActual())`
+// devolvía un objeto nuevo en cada render (por el spread con override),
+// disparando "Maximum update depth exceeded" en React.
+
+import { useEffect, useState, useCallback, useMemo } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { SPOTS } from "@/features/spots/data/spots";
 import { obtenerPronosticoViento } from "../services/openMeteo";
 import type { Pronostico } from "../types";
 
@@ -20,7 +27,17 @@ function clavePersistencia(spotId: string) {
 }
 
 export function usePronosticoViento(): EstadoHook {
-  const spot = useSpotStore((s) => s.getSpotActual());
+  // Suscripción a primitivos del store (estables entre renders)
+  const spotId = useSpotStore((s) => s.spotIdSeleccionado);
+  const overrides = useSpotStore((s) => s.overrides);
+
+  // Derivar spot con override aplicado (memo: solo cambia si cambian deps)
+  const spot = useMemo(() => {
+    const base = SPOTS.find((s) => s.id === spotId) ?? SPOTS[0];
+    const ov = overrides[base.id];
+    return ov ? { ...base, lat: ov.lat, lon: ov.lon } : base;
+  }, [spotId, overrides]);
+
   const [pronostico, setPronostico] = useState<Pronostico | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +57,6 @@ export function usePronosticoViento(): EstadoHook {
           setCargando(false);
           return;
         }
-        // Cache vieja: muéstrala mientras refrescamos
         setPronostico(cache);
       }
     } catch {
