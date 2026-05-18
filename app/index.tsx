@@ -1,8 +1,20 @@
-// Pantalla principal: muestra condición actual y pronóstico del spot seleccionado.
-import { ScrollView, View, Text, Pressable, ActivityIndicator } from "react-native";
+// Pantalla principal: pronóstico de viento del spot seleccionado.
+// MODIFICADO EN PROMPT 3.1: ahora permite "viajar en el tiempo" tappeando
+// las cards de Próximas 48h. El bloque AHORA se actualiza con la hora elegida.
+
+import { useState, useMemo, useEffect } from "react";
+import {
+  ScrollView,
+  View,
+  Text,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapPin, RefreshCw, Map } from "lucide-react-native";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
@@ -12,10 +24,53 @@ export default function PantallaPrincipal() {
   const spot = useSpotStore((s) => s.getSpotActual());
   const { pronostico, cargando, error, recargar } = usePronosticoViento();
 
-  // El primer punto con hora >= (ahora - 1h) = "ahora" en términos prácticos
-  const ahora = pronostico?.puntos.find(
-    (p) => new Date(p.hora) >= new Date(Date.now() - 60 * 60 * 1000),
+  // Estado: índice de la hora seleccionada en el array de puntos.
+  // Se inicializa cuando llegan los datos al primer punto futuro.
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState<number | null>(
+    null,
   );
+
+  // Calcular el índice "ahora" cuando llega el pronóstico
+  const indiceAhora = useMemo(() => {
+    if (!pronostico) return null;
+    const ahoraTs = Date.now() - 60 * 60 * 1000;
+    const idx = pronostico.puntos.findIndex(
+      (p) => new Date(p.hora).getTime() >= ahoraTs,
+    );
+    return idx === -1 ? 0 : idx;
+  }, [pronostico]);
+
+  // Cuando llega el pronóstico, inicializar selección en "ahora"
+  useEffect(() => {
+    if (indiceAhora !== null && indiceSeleccionado === null) {
+      setIndiceSeleccionado(indiceAhora);
+    }
+  }, [indiceAhora, indiceSeleccionado]);
+
+  // Si se cambió de spot, resetear selección a "ahora" del nuevo pronóstico
+  useEffect(() => {
+    if (indiceAhora !== null) {
+      setIndiceSeleccionado(indiceAhora);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spot.id]);
+
+  const puntoSeleccionado =
+    pronostico && indiceSeleccionado !== null
+      ? pronostico.puntos[indiceSeleccionado]
+      : null;
+
+  const esAhora =
+    indiceSeleccionado !== null && indiceSeleccionado === indiceAhora;
+
+  // Label del bloque destacado
+  const labelBloque = esAhora
+    ? "AHORA"
+    : puntoSeleccionado
+      ? format(new Date(puntoSeleccionado.hora), "EEE HH:mm 'hrs'", {
+          locale: es,
+        }).toUpperCase()
+      : "AHORA";
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={["bottom"]}>
@@ -39,7 +94,6 @@ export default function PantallaPrincipal() {
             </Pressable>
           </Link>
 
-          {/* Botón para ir al mapa interactivo */}
           <Link href="/mapa" asChild>
             <Pressable className="flex-row items-center justify-center gap-2 rounded-xl bg-mar-500 p-3">
               <Map size={18} color="#ffffff" />
@@ -50,7 +104,7 @@ export default function PantallaPrincipal() {
           </Link>
         </View>
 
-        {/* Estado: error */}
+        {/* Error */}
         {error && (
           <View className="rounded-xl bg-red-50 p-4">
             <Text className="text-sm text-red-700">{error}</Text>
@@ -59,12 +113,14 @@ export default function PantallaPrincipal() {
               className="mt-3 flex-row items-center gap-2 self-start rounded-lg bg-red-600 px-3 py-2"
             >
               <RefreshCw size={14} color="#fff" />
-              <Text className="text-sm font-semibold text-white">Reintentar</Text>
+              <Text className="text-sm font-semibold text-white">
+                Reintentar
+              </Text>
             </Pressable>
           </View>
         )}
 
-        {/* Estado: cargando sin datos previos */}
+        {/* Cargando */}
         {cargando && !pronostico && (
           <View className="items-center p-8">
             <ActivityIndicator size="large" color="#0a4d7a" />
@@ -74,11 +130,36 @@ export default function PantallaPrincipal() {
           </View>
         )}
 
-        {/* Estado: con datos */}
-        {ahora && <TarjetaCondicionActual punto={ahora} />}
-        {pronostico && <ListaPronostico puntos={pronostico.puntos} />}
+        {/* Bloque destacado: AHORA o hora seleccionada */}
+        {puntoSeleccionado && (
+          <TarjetaCondicionActual
+            punto={puntoSeleccionado}
+            label={labelBloque}
+          />
+        )}
 
-        {/* Footer con timestamp */}
+        {/* Botón "volver a ahora" si la selección no es ahora */}
+        {!esAhora && indiceAhora !== null && (
+          <Pressable
+            onPress={() => setIndiceSeleccionado(indiceAhora)}
+            className="self-center rounded-full bg-slate-200 px-4 py-2"
+          >
+            <Text className="text-sm font-semibold text-slate-700">
+              ← Volver a AHORA
+            </Text>
+          </Pressable>
+        )}
+
+        {/* Lista tappable */}
+        {pronostico && indiceSeleccionado !== null && (
+          <ListaPronostico
+            puntos={pronostico.puntos}
+            indiceSeleccionado={indiceSeleccionado}
+            onSeleccionar={setIndiceSeleccionado}
+          />
+        )}
+
+        {/* Footer */}
         {pronostico && (
           <Text className="mt-2 text-center text-xs text-slate-400">
             Actualizado:{" "}

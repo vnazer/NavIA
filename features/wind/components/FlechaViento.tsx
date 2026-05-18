@@ -1,34 +1,29 @@
 // Componente que renderiza UNA flecha de viento sobre el mapa como L.divIcon.
-// Recibe velocidad y dirección, genera el SVG con rotación y color Beaufort.
-// IMPORTANTE: la flecha apunta DESDE donde viene el viento (convención náutica).
-// Viento de 180° (sur) → flecha apunta al sur (abajo en el mapa).
+// MODIFICADO EN PROMPT 3.1: ahora es tappable y muestra popup con datos completos.
 
-import { Marker } from "react-leaflet";
+import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { beaufortDesdeNudos } from "@/lib/beaufort";
+import { formatearDireccion } from "@/lib/nautica";
 
 type Props = {
   lat: number;
   lon: number;
   velocidadNudos: number;
   direccionGrados: number;
+  rachasNudos: number;
+  hora: string; // ISO timestamp
 };
 
-/**
- * Mapea velocidad a longitud visual de la flecha en píxeles.
- * Rango: 10 px (calma) a 36 px (viento fuerte).
- */
 function largoFlecha(nudos: number): number {
   const minPx = 10;
   const maxPx = 36;
-  const escalaMax = 30; // nudos a partir de los cuales se satura el largo
+  const escalaMax = 30;
   return minPx + Math.min(nudos / escalaMax, 1) * (maxPx - minPx);
 }
 
-/**
- * Mapeo manual de clases Tailwind a hex porque NativeWind no resuelve
- * clases en tiempo de runtime (solo en build).
- */
 const COLORES: Record<string, string> = {
   "bg-slate-200":   "#e2e8f0",
   "bg-sky-200":     "#bae6fd",
@@ -50,9 +45,6 @@ function generarSVG(
   rotacionGrados: number,
   colorHex: string,
 ): string {
-  // SVG default: flecha vertical apuntando al norte (arriba).
-  // Origen de rotación: centro del SVG.
-  // Cabeza de flecha en (0, -largo/2), cola en (0, largo/2).
   const w = 16;
   const h = largoPx;
   const mid = w / 2;
@@ -62,6 +54,7 @@ function generarSVG(
       height: ${h}px;
       transform: rotate(${rotacionGrados}deg);
       transform-origin: center center;
+      cursor: pointer;
     ">
       <svg
         width="${w}"
@@ -94,6 +87,8 @@ export function FlechaViento({
   lon,
   velocidadNudos,
   direccionGrados,
+  rachasNudos,
+  hora,
 }: Props) {
   const beaufort = beaufortDesdeNudos(velocidadNudos);
   const color = COLORES[beaufort.colorTw] ?? "#0a4d7a";
@@ -104,8 +99,59 @@ export function FlechaViento({
     className: "navia-flecha-viento",
     html,
     iconSize: [16, largo],
-    iconAnchor: [8, largo / 2], // Anclar al centro de la flecha
+    iconAnchor: [8, largo / 2],
   });
 
-  return <Marker position={[lat, lon]} icon={icon} interactive={false} />;
+  const horaFormateada = format(new Date(hora), "EEE HH:mm", { locale: es });
+
+  return (
+    <Marker position={[lat, lon]} icon={icon}>
+      <Popup>
+        <div style={{ minWidth: 180, fontFamily: "system-ui, sans-serif" }}>
+          <div style={{
+            fontSize: 11,
+            color: "#64748b",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            letterSpacing: 0.5,
+          }}>
+            Viento previsto
+          </div>
+          <div style={{
+            marginTop: 4,
+            fontSize: 13,
+            color: "#0a4d7a",
+            fontWeight: 600,
+          }}>
+            {horaFormateada}
+          </div>
+          <div style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 4,
+            marginTop: 8,
+          }}>
+            <span style={{ fontSize: 32, fontWeight: 700, color: "#0f172a" }}>
+              {Math.round(velocidadNudos)}
+            </span>
+            <span style={{ fontSize: 14, color: "#64748b" }}>kt</span>
+          </div>
+          <div style={{ fontSize: 12, color: "#334155", marginTop: 2 }}>
+            Rachas {Math.round(rachasNudos)} kt
+          </div>
+          <div style={{ fontSize: 12, color: "#334155", marginTop: 4 }}>
+            {formatearDireccion(direccionGrados)}
+          </div>
+          <div style={{
+            fontSize: 11,
+            color: "#64748b",
+            marginTop: 6,
+            fontStyle: "italic",
+          }}>
+            Fuerza {beaufort.fuerza} · {beaufort.nombre}
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
 }
