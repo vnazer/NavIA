@@ -48,7 +48,13 @@ export default function PantallaBoyas() {
     [spotId],
   );
 
-  const boyasGuardadas = useBoyasStore((s) => s.boyasPorSpot[spot.id] ?? []);
+  // Suscribirse al map completo y derivar con useMemo para no devolver
+  // `[]` literal nuevo cada render (causa loop infinito en Zustand).
+  const boyasPorSpot = useBoyasStore((s) => s.boyasPorSpot);
+  const boyasGuardadas = useMemo(
+    () => boyasPorSpot[spot.id] ?? [],
+    [boyasPorSpot, spot.id],
+  );
   const setBoyas = useBoyasStore((s) => s.setBoyasDeSpot);
   const eliminarBoya = useBoyasStore((s) => s.eliminarBoya);
 

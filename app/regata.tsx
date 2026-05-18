@@ -42,7 +42,13 @@ export default function PantallaRegata() {
   const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
   const terminarSesion = useRegataStore((s) => s.terminarSesion);
   const agregarPunto = useRegataStore((s) => s.agregarPunto);
-  const boyasSpot = useBoyasStore((s) => s.boyasPorSpot[spot.id] ?? []);
+  // Suscribirse al map completo (referencia estable) y derivar las del spot
+  // con useMemo. Evita el infinite loop de devolver `[]` literal cada render.
+  const boyasPorSpot = useBoyasStore((s) => s.boyasPorSpot);
+  const boyasSpot = useMemo(
+    () => boyasPorSpot[spot.id] ?? [],
+    [boyasPorSpot, spot.id],
+  );
   // Si hay sesión activa, usar las boyas snapshot (editables);
   // si no, mostrar las del spot como preview.
   const boyasActivas = sesion?.boyasSnapshot ?? boyasSpot;
