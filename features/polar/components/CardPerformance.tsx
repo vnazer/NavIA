@@ -26,7 +26,10 @@ export function CardPerformance({ punto }: Props) {
   if (!punto) return null;
 
   return (
-    <View className="gap-3 rounded-2xl bg-white p-5 shadow-sm">
+    <View
+      className="gap-3 rounded-2xl bg-white p-5 shadow-sm"
+      style={{ zIndex: 10 }}
+    >
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
           <TrendingUp size={18} color="#0a4d7a" />

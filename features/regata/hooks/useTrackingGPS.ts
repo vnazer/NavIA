@@ -1,0 +1,89 @@
+// Hook de tracking GPS continuo usando expo-location.
+// Devuelve último punto + estado del permiso. Acepta callback para
+// persistir cada punto en el store.
+
+import { useEffect, useState, useRef } from "react";
+import * as Location from "expo-location";
+import type { PuntoGPS } from "../types";
+
+type EstadoPermiso = "pendiente" | "concedido" | "denegado";
+
+type Opciones = {
+  /** Si está activo, el hook subscribe al GPS. */
+  activo: boolean;
+  /** Callback llamado cada vez que llega un punto nuevo. */
+  onPunto?: (p: PuntoGPS) => void;
+};
+
+export function useTrackingGPS({ activo, onPunto }: Opciones) {
+  const [permiso, setPermiso] = useState<EstadoPermiso>("pendiente");
+  const [ultimoPunto, setUltimoPunto] = useState<PuntoGPS | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const onPuntoRef = useRef(onPunto);
+  onPuntoRef.current = onPunto;
+
+  useEffect(() => {
+    if (!activo) return;
+
+    let subscription: Location.LocationSubscription | null = null;
+    let cancelado = false;
+
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelado) return;
+        if (status !== "granted") {
+          setPermiso("denegado");
+          setError("Permiso de ubicación denegado");
+          return;
+        }
+        setPermiso("concedido");
+        setError(null);
+
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 1000, // cada segundo
+            distanceInterval: 1, // o cada 1m
+          },
+          (loc) => {
+            // speed viene en m/s, convertir a nudos (1 m/s = 1.9438 kt)
+            const sogKt =
+              loc.coords.speed != null && loc.coords.speed >= 0
+                ? loc.coords.speed * 1.9438
+                : null;
+            // heading viene en grados 0-360, -1 si no disponible
+            const cog =
+              loc.coords.heading != null && loc.coords.heading >= 0
+                ? loc.coords.heading
+                : null;
+
+            const punto: PuntoGPS = {
+              timestamp: loc.timestamp,
+              lat: loc.coords.latitude,
+              lon: loc.coords.longitude,
+              sog: sogKt,
+              cog,
+              precisionMetros: loc.coords.accuracy ?? null,
+            };
+            setUltimoPunto(punto);
+            onPuntoRef.current?.(punto);
+          },
+        );
+      } catch (err) {
+        if (!cancelado) {
+          setError(
+            err instanceof Error ? err.message : "Error desconocido GPS",
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelado = true;
+      subscription?.remove();
+    };
+  }, [activo]);
+
+  return { permiso, ultimoPunto, error };
+}

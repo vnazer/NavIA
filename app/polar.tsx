@@ -58,7 +58,10 @@ export default function PantallaPolar() {
 
       <ScrollView contentContainerClassName="p-4 gap-4">
         {/* Selector de barco arriba */}
-        <View className="flex-row items-center justify-between rounded-xl bg-white p-4">
+        <View
+          className="flex-row items-center justify-between rounded-xl bg-white p-4"
+          style={{ zIndex: 10 }}
+        >
           <View>
             <Text className="text-xs uppercase text-slate-500">Barco</Text>
             <Text className="mt-1 text-base font-semibold text-slate-900">

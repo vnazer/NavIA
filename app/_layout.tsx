@@ -19,6 +19,7 @@ export default function RootLayout() {
         <Stack.Screen name="spots" options={{ title: "Elegir spot" }} />
         <Stack.Screen name="mapa" options={{ title: "Mapa de spots" }} />
         <Stack.Screen name="polar" options={{ headerShown: false }} />
+        <Stack.Screen name="regata" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );

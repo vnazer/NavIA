@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, RefreshCw, Map } from "lucide-react-native";
+import { MapPin, RefreshCw, Map, Navigation } from "lucide-react-native";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
@@ -106,14 +106,24 @@ export default function PantallaPrincipal() {
             </Pressable>
           </Link>
 
-          <Link href="/mapa" asChild>
-            <Pressable className="flex-row items-center justify-center gap-2 rounded-xl bg-mar-500 p-3">
-              <Map size={18} color="#ffffff" />
-              <Text className="text-sm font-semibold text-white">
-                Ver mapa
-              </Text>
-            </Pressable>
-          </Link>
+          <View className="flex-row gap-2">
+            <Link href="/mapa" asChild>
+              <Pressable className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-mar-500 p-3">
+                <Map size={18} color="#ffffff" />
+                <Text className="text-sm font-semibold text-white">
+                  Ver mapa
+                </Text>
+              </Pressable>
+            </Link>
+            <Link href="/regata" asChild>
+              <Pressable className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-mar-700 p-3">
+                <Navigation size={18} color="#ffffff" />
+                <Text className="text-sm font-semibold text-white">
+                  Regata
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
         </View>
 
         {/* Error */}
