@@ -2,9 +2,9 @@
 // actual del barco. Útil durante la regata para saber a qué boya apuntar.
 
 import { View, Text } from "react-native";
-import { Compass, MapPin } from "lucide-react-native";
+import { Compass } from "lucide-react-native";
 import { infoBoyasDesde } from "../lib/navegacionBoyas";
-import type { Boya } from "../types";
+import { BOYA_META, type Boya } from "../types";
 
 type Props = {
   boyas: Boya[];
@@ -14,6 +14,19 @@ type Props = {
 function formatearDistancia(m: number): string {
   if (m < 1000) return `${Math.round(m)} m`;
   return `${(m / 1852).toFixed(2)} MN`;
+}
+
+function EtiquetaBoya({ boya }: { boya: Boya }) {
+  const meta = BOYA_META[boya.tipo];
+  return (
+    <View className="flex-row items-center gap-2">
+      <Text style={{ fontSize: 14 }}>{meta.emoji}</Text>
+      <Text className="text-sm font-semibold text-slate-900">
+        {meta.nombre}
+        {boya.label ? ` · ${boya.label}` : ""}
+      </Text>
+    </View>
+  );
 }
 
 export function ListaBoyasNavegacion({ boyas, posBarco }: Props) {
@@ -33,17 +46,12 @@ export function ListaBoyasNavegacion({ boyas, posBarco }: Props) {
         {boyas.map((b) => (
           <View
             key={b.id}
-            className="flex-row items-center gap-2 rounded-xl bg-slate-50 p-3"
+            className="flex-row items-center justify-between rounded-xl bg-slate-50 p-3"
           >
-            <MapPin size={14} color="#ea580c" />
-            <View>
-              <Text className="text-sm font-semibold text-slate-900">
-                {b.nombre}
-              </Text>
-              <Text className="font-mono text-xs text-slate-500">
-                {b.lat.toFixed(5)}, {b.lon.toFixed(5)}
-              </Text>
-            </View>
+            <EtiquetaBoya boya={b} />
+            <Text className="font-mono text-xs text-slate-500">
+              {b.lat.toFixed(5)}, {b.lon.toFixed(5)}
+            </Text>
           </View>
         ))}
       </View>
@@ -59,12 +67,7 @@ export function ListaBoyasNavegacion({ boyas, posBarco }: Props) {
           key={i.boya.id}
           className="flex-row items-center justify-between rounded-xl bg-slate-50 p-3"
         >
-          <View className="flex-row items-center gap-2">
-            <MapPin size={16} color="#ea580c" />
-            <Text className="text-sm font-semibold text-slate-900">
-              {i.boya.nombre}
-            </Text>
-          </View>
+          <EtiquetaBoya boya={i.boya} />
           <View className="flex-row items-center gap-4">
             <Text className="text-sm font-semibold text-slate-800">
               {formatearDistancia(i.distanciaMetros)}

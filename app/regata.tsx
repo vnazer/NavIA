@@ -42,16 +42,10 @@ export default function PantallaRegata() {
   const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
   const terminarSesion = useRegataStore((s) => s.terminarSesion);
   const agregarPunto = useRegataStore((s) => s.agregarPunto);
-  // Suscribirse al map completo (referencia estable) y derivar las del spot
-  // con useMemo. Evita el infinite loop de devolver `[]` literal cada render.
-  const boyasPorSpot = useBoyasStore((s) => s.boyasPorSpot);
-  const boyasSpot = useMemo(
-    () => boyasPorSpot[spot.id] ?? [],
-    [boyasPorSpot, spot.id],
-  );
-  // Si hay sesión activa, usar las boyas snapshot (editables);
-  // si no, mostrar las del spot como preview.
-  const boyasActivas = sesion?.boyasSnapshot ?? boyasSpot;
+  // Boyas race-day (store global, no por spot). Si hay sesión activa,
+  // mostramos el snapshot que se guardó al iniciarla; sino, las del store.
+  const boyasGlobales = useBoyasStore((s) => s.boyas);
+  const boyasActivas = sesion?.boyasSnapshot ?? boyasGlobales;
 
   // Viento del momento (primer punto futuro del pronóstico)
   const vientoActual = useMemo(() => {
@@ -87,9 +81,9 @@ export default function PantallaRegata() {
       barcoId: barco.id,
       spotId: spot.id,
       vientoSnapshot: vientoActual,
-      boyasSnapshot: boyasSpot,
+      boyasSnapshot: boyasGlobales,
     });
-  }, [iniciarSesion, barco.id, spot.id, vientoActual, boyasSpot]);
+  }, [iniciarSesion, barco.id, spot.id, vientoActual, boyasGlobales]);
 
   const posBarco = ultimoPunto
     ? { lat: ultimoPunto.lat, lon: ultimoPunto.lon, cog: ultimoPunto.cogGrados }

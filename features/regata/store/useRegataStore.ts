@@ -103,19 +103,55 @@ export const useRegataStore = create<RegataState>()(
     {
       name: "navia-regata",
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
-      // Migration: garantizar que toda sesión persistida tenga boyasSnapshot
-      // (v1 no tenía este campo). Si una sesión vieja viene sin él, default [].
+      version: 3,
+      // Migrations:
+      //  v1 → v2: agrega boyasSnapshot: [] si falta
+      //  v2 → v3: boyasSnapshot ahora tiene shape { id, tipo, lat, lon, label?,
+      //           fechaCreacion }. Las viejas { id, nombre, lat, lon } se
+      //           normalizan a tipo "custom" con label = nombre.
       migrate: (persistedState: unknown, _version: number) => {
         const state = persistedState as RegataState | null;
-        if (!state) return { sesionActiva: null, sesionesHistoricas: [] } as Partial<RegataState>;
-        const normalizar = (s: Sesion | null): Sesion | null =>
-          s ? { ...s, boyasSnapshot: s.boyasSnapshot ?? [] } : null;
+        if (!state)
+          return {
+            sesionActiva: null,
+            sesionesHistoricas: [],
+          } as Partial<RegataState>;
+
+        type BoyaVieja = {
+          id?: string;
+          nombre?: string;
+          tipo?: string;
+          lat: number;
+          lon: number;
+          label?: string;
+          fechaCreacion?: number;
+        };
+
+        const normalizarBoya = (b: BoyaVieja) => ({
+          id: b.id ?? `migrado_${Math.random().toString(36).slice(2, 8)}`,
+          tipo: (b.tipo as "custom") ?? "custom",
+          lat: b.lat,
+          lon: b.lon,
+          label: b.label ?? b.nombre,
+          fechaCreacion: b.fechaCreacion ?? Date.now(),
+        });
+
+        const normalizarSesion = (s: Sesion | null): Sesion | null => {
+          if (!s) return null;
+          const snapshot = Array.isArray(s.boyasSnapshot) ? s.boyasSnapshot : [];
+          return {
+            ...s,
+            boyasSnapshot: snapshot.map((b) =>
+              normalizarBoya(b as unknown as BoyaVieja),
+            ) as Sesion["boyasSnapshot"],
+          };
+        };
+
         return {
           ...state,
-          sesionActiva: normalizar(state.sesionActiva),
+          sesionActiva: normalizarSesion(state.sesionActiva),
           sesionesHistoricas: (state.sesionesHistoricas ?? []).map(
-            (s) => normalizar(s) as Sesion,
+            (s) => normalizarSesion(s) as Sesion,
           ),
         } as Partial<RegataState>;
       },

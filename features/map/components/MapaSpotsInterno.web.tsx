@@ -3,15 +3,23 @@
 // accede a `window` al evaluar sus módulos y rompería el SSR estático
 // que hace Expo Router con `output: static`.
 //
-// MODIFICADO EN PROMPT 3.6: agrega modo edición. Cuando está activo, los
-// marcadores de spots son arrastrables. Al soltar, se guarda la coordenada
-// como override en AsyncStorage.
+// MODIFICADO EN PROMPT 3.6: agrega modo edición de spots (arrastre).
+// MODIFICADO EN PROMPT 7: agrega capa de boyas race-day. Click derecho
+// (web) o long-press (mobile) abre modal para agregar una boya en esas
+// coordenadas. Las boyas aparecen como markers con icono propio por tipo.
 
 import "leaflet/dist/leaflet.css";
-import { useState, useMemo, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
 import L from "leaflet";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { SPOTS } from "@/features/spots/data/spots";
 import { usePronosticoGrid } from "@/features/wind/hooks/usePronosticoGrid";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
@@ -23,11 +31,72 @@ import { SelectorHora } from "./SelectorHora";
 import { ControlCapaViento } from "./ControlCapaViento";
 import { ControlModoEdicion } from "./ControlModoEdicion";
 import { CardVientoSpot } from "./CardVientoSpot";
+import { iconoBoya } from "@/features/boyas/components/iconoBoya";
+import { PopupBoya } from "@/features/boyas/components/PopupBoya";
+import { ModalAgregarBoya } from "@/features/boyas/components/ModalAgregarBoya.web";
+import type { TipoBoya } from "@/features/boyas/types";
+
+const LONG_PRESS_MS = 600;
+
+type CoordsPendientes = { lat: number; lon: number } | null;
+
+/**
+ * Captura long-press en el mapa para abrir el modal de agregar boya.
+ *
+ * - Web: contextmenu (click derecho) dispara inmediato
+ * - Mobile/touch: mousedown inicia un timer de 600ms; si pasa el tiempo
+ *   sin que el usuario suelte / arrastre / haga zoom, dispara como long-press.
+ *
+ * Está dentro del MapContainer porque useMapEvents requiere ese contexto.
+ */
+function CapturadorLongPress({
+  onLongPress,
+}: {
+  onLongPress: (lat: number, lon: number) => void;
+}) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelar = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  useMapEvents({
+    contextmenu(e) {
+      // Click derecho desktop — prevenimos el menú del browser
+      e.originalEvent.preventDefault();
+      onLongPress(e.latlng.lat, e.latlng.lng);
+    },
+    mousedown(e) {
+      cancelar();
+      const lat = e.latlng.lat;
+      const lon = e.latlng.lng;
+      timerRef.current = setTimeout(() => {
+        onLongPress(lat, lon);
+        timerRef.current = null;
+      }, LONG_PRESS_MS);
+    },
+    mouseup: cancelar,
+    dragstart: cancelar,
+    drag: cancelar,
+    movestart: cancelar,
+    zoom: cancelar,
+    zoomstart: cancelar,
+  });
+
+  return null;
+}
 
 export default function MapaSpotsInterno() {
   const spotIdActual = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
   const setOverride = useSpotStore((s) => s.setOverride);
+
+  // Boyas race-day (store global, persistido)
+  const boyas = useBoyasStore((s) => s.boyas);
+  const agregarBoya = useBoyasStore((s) => s.agregarBoya);
 
   // Derivar spots con overrides aplicados (memo en deps primitivas para
   // evitar loops infinitos — el selector que retorna array nuevo causa
@@ -52,6 +121,8 @@ export default function MapaSpotsInterno() {
   const [indiceHora, setIndiceHora] = useState<number | null>(null);
   const [capaVientoVisible, setCapaVientoVisible] = useState(true);
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [coordsPendientes, setCoordsPendientes] =
+    useState<CoordsPendientes>(null);
 
   const indiceAhora = useMemo(() => {
     if (!pronosticoGrid?.puntos[0]?.puntos.length) return null;
@@ -86,14 +157,25 @@ export default function MapaSpotsInterno() {
     );
   })();
 
-  const esAhora =
-    indiceAhora !== null && indiceHoraSeguro === indiceAhora;
+  const esAhora = indiceAhora !== null && indiceHoraSeguro === indiceAhora;
 
   // Handler para cuando se suelta un marcador arrastrado
   const handleDragEnd = (spotId: string) => (e: L.LeafletEvent) => {
     const target = e.target as L.Marker;
     const { lat, lng } = target.getLatLng();
     setOverride(spotId, lat, lng);
+  };
+
+  const handleLongPress = (lat: number, lon: number) => {
+    // En modo edición no queremos agregar boyas
+    if (modoEdicion) return;
+    setCoordsPendientes({ lat, lon });
+  };
+
+  const handleConfirmarBoya = (tipo: TipoBoya, label?: string) => {
+    if (!coordsPendientes) return;
+    agregarBoya(tipo, coordsPendientes.lat, coordsPendientes.lon, label);
+    setCoordsPendientes(null);
   };
 
   return (
@@ -107,7 +189,12 @@ export default function MapaSpotsInterno() {
         scrollWheelZoom={true}
       >
         <TileLayer url={TILES.base.url} attribution={TILES.base.atribucion} />
-        <TileLayer url={TILES.seamark.url} attribution={TILES.seamark.atribucion} />
+        <TileLayer
+          url={TILES.seamark.url}
+          attribution={TILES.seamark.atribucion}
+        />
+
+        <CapturadorLongPress onLongPress={handleLongPress} />
 
         <CapaVientoMapa
           pronostico={pronosticoGrid}
@@ -137,6 +224,19 @@ export default function MapaSpotsInterno() {
             </Marker>
           );
         })}
+
+        {/* Markers de boyas race-day (NUEVO Prompt 7) */}
+        {boyas.map((b) => (
+          <Marker
+            key={b.id}
+            position={[b.lat, b.lon]}
+            icon={iconoBoya(b.tipo, b.label)}
+          >
+            <Popup>
+              <PopupBoya boya={b} />
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
 
       <ControlCapaViento
@@ -151,21 +251,45 @@ export default function MapaSpotsInterno() {
 
       {/* Banner instructivo cuando modo edición está activo */}
       {modoEdicion && (
-        <div style={{
-          position: "absolute",
-          top: 16,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 1000,
-          backgroundColor: "#dc2626",
-          color: "white",
-          padding: "8px 16px",
-          borderRadius: 999,
-          fontSize: 13,
-          fontWeight: 600,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            backgroundColor: "#dc2626",
+            color: "white",
+            padding: "8px 16px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 600,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}
+        >
           🎯 Arrastrá cada marcador a la ubicación correcta del club
+        </div>
+      )}
+
+      {/* Hint para agregar boyas — solo cuando no hay boyas y no estás editando */}
+      {!modoEdicion && boyas.length === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            backgroundColor: "rgba(15, 23, 42, 0.85)",
+            color: "white",
+            padding: "6px 14px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 500,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        >
+          Click derecho (o mantené tocado) sobre el mapa para marcar una boya
         </div>
       )}
 
@@ -212,6 +336,16 @@ export default function MapaSpotsInterno() {
             onCambio={setIndiceHora}
           />
         )}
+
+      {/* Modal flotante para agregar boya (montado fuera del MapContainer) */}
+      {coordsPendientes && (
+        <ModalAgregarBoya
+          lat={coordsPendientes.lat}
+          lon={coordsPendientes.lon}
+          onConfirmar={handleConfirmarBoya}
+          onCancelar={() => setCoordsPendientes(null)}
+        />
+      )}
     </div>
   );
 }

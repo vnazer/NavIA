@@ -1,68 +1,110 @@
-// Store de boyas persistidas por spot. Lo que está acá es el "set predeterminado"
-// del spot. Al iniciar una regata, este set se copia al boyasSnapshot de la
-// sesión y se puede editar sin afectar el set del spot.
+// Store global de boyas race-day. Persistido en AsyncStorage.
+// Las boyas son ephemeral: típicamente se cargan al inicio de una regata y
+// se limpian al final con limpiarTodas(). No están asociadas a un spot.
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Boya } from "../types";
+import type { Boya, TipoBoya } from "../types";
 
-type BoyasState = {
-  /** Map de spotId → array de boyas. */
-  boyasPorSpot: Record<string, Boya[]>;
-
-  getBoyasDeSpot: (spotId: string) => Boya[];
-  setBoyasDeSpot: (spotId: string, boyas: Boya[]) => void;
-  agregarBoya: (spotId: string, boya: Boya) => void;
-  eliminarBoya: (spotId: string, boyaId: string) => void;
-  limpiarSpot: (spotId: string) => void;
+type Estado = {
+  boyas: Boya[];
 };
 
-export const useBoyasStore = create<BoyasState>()(
+type Acciones = {
+  agregarBoya: (
+    tipo: TipoBoya,
+    lat: number,
+    lon: number,
+    label?: string,
+  ) => string;
+  /** Inserta varias de una sola pasada (usado por el parser de coords pegadas). */
+  agregarMultiples: (entradas: Array<Omit<Boya, "id" | "fechaCreacion">>) => void;
+  actualizarBoya: (id: string, cambios: Partial<Omit<Boya, "id">>) => void;
+  moverBoya: (id: string, lat: number, lon: number) => void;
+  eliminarBoya: (id: string) => void;
+  limpiarTodas: () => void;
+};
+
+function generarId(): string {
+  return `boya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export const useBoyasStore = create<Estado & Acciones>()(
   persist(
-    (set, get) => ({
-      boyasPorSpot: {},
+    (set) => ({
+      boyas: [],
 
-      getBoyasDeSpot: (spotId) => get().boyasPorSpot[spotId] ?? [],
-
-      setBoyasDeSpot: (spotId, boyas) => {
-        set({
-          boyasPorSpot: {
-            ...get().boyasPorSpot,
-            [spotId]: boyas,
-          },
-        });
+      agregarBoya: (tipo, lat, lon, label) => {
+        const id = generarId();
+        const nueva: Boya = {
+          id,
+          tipo,
+          lat,
+          lon,
+          label,
+          fechaCreacion: Date.now(),
+        };
+        set((s) => ({ boyas: [...s.boyas, nueva] }));
+        return id;
       },
 
-      agregarBoya: (spotId, boya) => {
-        const actuales = get().boyasPorSpot[spotId] ?? [];
-        set({
-          boyasPorSpot: {
-            ...get().boyasPorSpot,
-            [spotId]: [...actuales, boya],
-          },
-        });
+      agregarMultiples: (entradas) => {
+        const nuevas: Boya[] = entradas.map((e, i) => ({
+          id: `boya_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+          fechaCreacion: Date.now(),
+          ...e,
+        }));
+        set((s) => ({ boyas: [...s.boyas, ...nuevas] }));
       },
 
-      eliminarBoya: (spotId, boyaId) => {
-        const actuales = get().boyasPorSpot[spotId] ?? [];
-        set({
-          boyasPorSpot: {
-            ...get().boyasPorSpot,
-            [spotId]: actuales.filter((b) => b.id !== boyaId),
-          },
-        });
-      },
+      actualizarBoya: (id, cambios) =>
+        set((s) => ({
+          boyas: s.boyas.map((b) => (b.id === id ? { ...b, ...cambios } : b)),
+        })),
 
-      limpiarSpot: (spotId) => {
-        const copia = { ...get().boyasPorSpot };
-        delete copia[spotId];
-        set({ boyasPorSpot: copia });
-      },
+      moverBoya: (id, lat, lon) =>
+        set((s) => ({
+          boyas: s.boyas.map((b) => (b.id === id ? { ...b, lat, lon } : b)),
+        })),
+
+      eliminarBoya: (id) =>
+        set((s) => ({ boyas: s.boyas.filter((b) => b.id !== id) })),
+
+      limpiarTodas: () => set({ boyas: [] }),
     }),
     {
       name: "navia-boyas",
       storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      // v1 (anterior): { boyasPorSpot: Record<string, { id, nombre, lat, lon }[]> }
+      // v2 (nueva):    { boyas: Boya[] global con tipo + label }
+      // Aplanamos boyas viejas como tipo "custom" con label = nombre.
+      migrate: (persistedState: unknown, version: number) => {
+        if (version < 2 && persistedState && typeof persistedState === "object") {
+          const old = persistedState as {
+            boyasPorSpot?: Record<
+              string,
+              Array<{ id: string; nombre: string; lat: number; lon: number }>
+            >;
+          };
+          const aplanadas: Boya[] = [];
+          for (const spotId in old.boyasPorSpot ?? {}) {
+            for (const b of old.boyasPorSpot[spotId]) {
+              aplanadas.push({
+                id: b.id,
+                tipo: "custom",
+                lat: b.lat,
+                lon: b.lon,
+                label: b.nombre,
+                fechaCreacion: Date.now(),
+              });
+            }
+          }
+          return { boyas: aplanadas } as Partial<Estado & Acciones>;
+        }
+        return persistedState as Partial<Estado & Acciones>;
+      },
     },
   ),
 );

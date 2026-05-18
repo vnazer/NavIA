@@ -1,11 +1,13 @@
-// Mapa pequeño en la pantalla de regata: muestra barco (azul) + boyas (naranja).
-// Cargado lazy desde MapaRegata.web para no romper SSR de Expo Router.
+// Mini-mapa para la pantalla /regata: barco (triángulo orientado al COG)
+// + boyas (con sus iconos por tipo). Cargado lazy desde MapaRegata.web
+// para no romper SSR de Expo Router.
 
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { TILES } from "@/features/map/data/config";
-import type { Boya } from "../types";
+import { iconoBoya } from "./iconoBoya";
+import { BOYA_META, type Boya } from "../types";
 
 type Props = {
   posBarco: { lat: number; lon: number; cog?: number } | null;
@@ -14,31 +16,7 @@ type Props = {
   fallback: { lat: number; lon: number };
 };
 
-function iconoBoya(color: string, nombre: string): L.DivIcon {
-  return L.divIcon({
-    className: "navia-boya-marker",
-    html: `<div style="
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      background: ${color};
-      border: 2px solid white;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      font-family: system-ui, sans-serif;
-    ">${nombre}</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-  });
-}
-
 function iconoBarco(cog: number | undefined): L.DivIcon {
-  // Triángulo apuntando al rumbo. Si no hay COG, círculo.
   const rotacion = cog ?? 0;
   return L.divIcon({
     className: "navia-barco-marker",
@@ -74,7 +52,11 @@ function calcularBounds(
   ];
 }
 
-export default function MapaRegataInterno({ posBarco, boyas, fallback }: Props) {
+export default function MapaRegataInterno({
+  posBarco,
+  boyas,
+  fallback,
+}: Props) {
   const centro = posBarco ?? fallback;
   const bounds = calcularBounds(centro, boyas);
 
@@ -98,19 +80,27 @@ export default function MapaRegataInterno({ posBarco, boyas, fallback }: Props) 
           <Popup>Tu posición</Popup>
         </Marker>
       )}
-      {boyas.map((b) => (
-        <Marker
-          key={b.id}
-          position={[b.lat, b.lon]}
-          icon={iconoBoya(b.color ?? "#ea580c", b.nombre)}
-        >
-          <Popup>
-            <strong>{b.nombre}</strong>
-            <br />
-            {b.lat.toFixed(5)}, {b.lon.toFixed(5)}
-          </Popup>
-        </Marker>
-      ))}
+      {boyas.map((b) => {
+        const meta = BOYA_META[b.tipo];
+        return (
+          <Marker
+            key={b.id}
+            position={[b.lat, b.lon]}
+            icon={iconoBoya(b.tipo, b.label)}
+          >
+            <Popup>
+              <strong>
+                {meta.emoji} {meta.nombre}
+                {b.label ? ` · ${b.label}` : ""}
+              </strong>
+              <br />
+              <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+                {b.lat.toFixed(5)}, {b.lon.toFixed(5)}
+              </span>
+            </Popup>
+          </Marker>
+        );
+      })}
     </MapContainer>
   );
 }
