@@ -12,6 +12,7 @@ import {
   Navigation,
   Edit3,
   MapPin,
+  Compass,
 } from "lucide-react-native";
 import { SPOTS } from "@/features/spots/data/spots";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
@@ -157,6 +158,16 @@ export default function PantallaRegata() {
             </Text>
           )}
         </View>
+
+        {/* Acceso al modo táctico (waypoint + prestart) */}
+        <Link href="/tactica" asChild>
+          <Pressable className="flex-row items-center justify-center gap-2 rounded-xl bg-mar-700 p-3">
+            <Compass size={16} color="white" />
+            <Text className="text-sm font-semibold text-white">
+              Modo táctico (timer · waypoint · prestart)
+            </Text>
+          </Pressable>
+        </Link>
 
         {/* Botón iniciar/detener */}
         {!trackingActivo ? (

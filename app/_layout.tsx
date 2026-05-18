@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="polar" options={{ headerShown: false }} />
         <Stack.Screen name="regata" options={{ headerShown: false }} />
         <Stack.Screen name="boyas" options={{ headerShown: false }} />
+        <Stack.Screen name="tactica" options={{ headerShown: false }} />
         <Stack.Screen name="bitacora/index" options={{ headerShown: false }} />
         <Stack.Screen name="bitacora/[id]" options={{ headerShown: false }} />
       </Stack>

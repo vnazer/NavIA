@@ -1,9 +1,12 @@
 // Hook de tracking GPS continuo usando expo-location.
-// Devuelve último punto + estado del permiso. Acepta callback para
-// persistir cada punto en el store.
+// Mantiene API original (devuelve permiso/ultimoPunto/error) PERO también
+// escribe al store global useGpsStore para que otros componentes lean sin
+// abrir su propia subscription (evita doble drain de batería y conflictos
+// de permisos).
 
 import { useEffect, useState, useRef } from "react";
 import * as Location from "expo-location";
+import { useGpsStore } from "../store/useGpsStore";
 import type { PuntoTrack } from "../types";
 
 type EstadoPermiso = "pendiente" | "concedido" | "denegado";
@@ -28,6 +31,9 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
     let subscription: Location.LocationSubscription | null = null;
     let cancelado = false;
 
+    // Refcount global: si ya hay otra subscription activa, no spawneamos otra
+    useGpsStore.getState().incrementarRef();
+
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -35,10 +41,15 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
         if (status !== "granted") {
           setPermiso("denegado");
           setError("Permiso de ubicación denegado");
+          useGpsStore.setState({
+            permiso: "denegado",
+            error: "Permiso de ubicación denegado",
+          });
           return;
         }
         setPermiso("concedido");
         setError(null);
+        useGpsStore.setState({ permiso: "concedido", error: null });
 
         subscription = await Location.watchPositionAsync(
           {
@@ -47,12 +58,10 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
             distanceInterval: 1,
           },
           (loc) => {
-            // speed viene en m/s, convertir a nudos (1 m/s = 1.9438 kt)
             const sogKts =
               loc.coords.speed != null && loc.coords.speed >= 0
                 ? loc.coords.speed * 1.9438
                 : 0;
-            // heading viene en grados 0-360, -1 si no disponible
             const cogGrados =
               loc.coords.heading != null && loc.coords.heading >= 0
                 ? loc.coords.heading
@@ -67,23 +76,23 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
               precisionMetros: loc.coords.accuracy ?? null,
             };
             setUltimoPunto(punto);
+            useGpsStore.getState().setUltimoPunto(punto);
             onPuntoRef.current?.(punto);
           },
         );
       } catch (err) {
         if (!cancelado) {
-          setError(
-            err instanceof Error ? err.message : "Error desconocido GPS",
-          );
+          const msg =
+            err instanceof Error ? err.message : "Error desconocido GPS";
+          setError(msg);
+          useGpsStore.setState({ error: msg });
         }
       }
     })();
 
     return () => {
       cancelado = true;
-      // En web (expo-location 18), watchPositionAsync puede devolver un
-      // objeto sin método remove si la subscription aún no se materializó
-      // (StrictMode mount/unmount rápido). Cleanup defensivo.
+      useGpsStore.getState().decrementarRef();
       try {
         if (subscription && typeof subscription.remove === "function") {
           subscription.remove();

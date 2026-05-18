@@ -15,6 +15,7 @@ import {
   TileLayer,
   Marker,
   Popup,
+  Polyline,
   useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
@@ -35,6 +36,7 @@ import { iconoBoya } from "@/features/boyas/components/iconoBoya";
 import { PopupBoya } from "@/features/boyas/components/PopupBoya";
 import { ModalAgregarBoya } from "@/features/boyas/components/ModalAgregarBoya.web";
 import type { TipoBoya } from "@/features/boyas/types";
+import { useTacticaStore } from "@/features/regata/store/useTacticaStore";
 
 const LONG_PRESS_MS = 600;
 
@@ -97,6 +99,21 @@ export default function MapaSpotsInterno() {
   // Boyas race-day (store global, persistido)
   const boyas = useBoyasStore((s) => s.boyas);
   const agregarBoya = useBoyasStore((s) => s.agregarBoya);
+
+  // Línea de salida del modo táctico (reactivo)
+  const modoTactico = useTacticaStore((s) => s.modoActivo);
+  const committeeId = useTacticaStore((s) => s.boyaCommitteeId);
+  const pinId = useTacticaStore((s) => s.boyaPinId);
+  const lineaSalida = useMemo(() => {
+    if (modoTactico !== "prestart") return null;
+    const c = boyas.find((b) => b.id === committeeId);
+    const p = boyas.find((b) => b.id === pinId);
+    if (!c || !p) return null;
+    return {
+      committee: [c.lat, c.lon] as [number, number],
+      pin: [p.lat, p.lon] as [number, number],
+    };
+  }, [modoTactico, committeeId, pinId, boyas]);
 
   // Derivar spots con overrides aplicados (memo en deps primitivas para
   // evitar loops infinitos — el selector que retorna array nuevo causa
@@ -237,6 +254,19 @@ export default function MapaSpotsInterno() {
             </Popup>
           </Marker>
         ))}
+
+        {/* Línea de salida durante modo prestart (NUEVO Prompt 8) */}
+        {lineaSalida && (
+          <Polyline
+            positions={[lineaSalida.committee, lineaSalida.pin]}
+            pathOptions={{
+              color: "#dc2626",
+              weight: 3,
+              dashArray: "6 6",
+              opacity: 0.9,
+            }}
+          />
+        )}
       </MapContainer>
 
       <ControlCapaViento
