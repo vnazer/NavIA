@@ -2,7 +2,7 @@
 import { ScrollView, View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, RefreshCw } from "lucide-react-native";
+import { MapPin, RefreshCw, Map } from "lucide-react-native";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
@@ -20,23 +20,35 @@ export default function PantallaPrincipal() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={["bottom"]}>
       <ScrollView contentContainerClassName="p-4 gap-4">
-        {/* Header con spot actual */}
-        <Link href="/spots" asChild>
-          <Pressable className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm">
-            <View className="flex-row items-center gap-3">
-              <MapPin size={20} color="#0a4d7a" />
-              <View>
-                <Text className="text-lg font-semibold text-slate-900">
-                  {spot.nombre}
-                </Text>
-                {spot.club && (
-                  <Text className="text-xs text-slate-500">{spot.club}</Text>
-                )}
+        {/* Header con spot actual + botón mapa */}
+        <View className="gap-2">
+          <Link href="/spots" asChild>
+            <Pressable className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm">
+              <View className="flex-row items-center gap-3">
+                <MapPin size={20} color="#0a4d7a" />
+                <View>
+                  <Text className="text-lg font-semibold text-slate-900">
+                    {spot.nombre}
+                  </Text>
+                  {spot.club && (
+                    <Text className="text-xs text-slate-500">{spot.club}</Text>
+                  )}
+                </View>
               </View>
-            </View>
-            <Text className="text-sm text-mar-500">Cambiar</Text>
-          </Pressable>
-        </Link>
+              <Text className="text-sm text-mar-500">Cambiar</Text>
+            </Pressable>
+          </Link>
+
+          {/* Botón para ir al mapa interactivo */}
+          <Link href="/mapa" asChild>
+            <Pressable className="flex-row items-center justify-center gap-2 rounded-xl bg-mar-500 p-3">
+              <Map size={18} color="#ffffff" />
+              <Text className="text-sm font-semibold text-white">
+                Ver mapa
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
 
         {/* Estado: error */}
         {error && (
