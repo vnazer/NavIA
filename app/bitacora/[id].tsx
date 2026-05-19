@@ -90,6 +90,17 @@ export default function PantallaDetalleSesion() {
     });
   };
 
+  const handleExportar = async () => {
+    const res = await exportarGpx(sesion);
+    if (Platform.OS === "web") {
+      if (!res.ok && typeof window !== "undefined") {
+        window.alert(res.mensaje);
+      }
+    } else {
+      Alert.alert(res.ok ? "Listo" : "No se pudo exportar", res.mensaje);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
       <View className="flex-row items-center justify-between gap-3 bg-mar-700 p-4">
@@ -105,7 +116,7 @@ export default function PantallaDetalleSesion() {
           </View>
         </View>
         <View className="flex-row items-center gap-3">
-          <Pressable onPress={() => exportarGpx(sesion)} hitSlop={12}>
+          <Pressable onPress={handleExportar} hitSlop={12}>
             <Download size={20} color="white" />
           </Pressable>
           <Pressable onPress={handleEliminar} hitSlop={12}>
