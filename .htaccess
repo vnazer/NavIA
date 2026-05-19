@@ -1,0 +1,39 @@
+# NavIA — Apache rewrite para Expo Router (output: static)
+# Hostinger usa Apache; este fallback evita 404 en rutas dinámicas
+# como /bitacora/{id} sirviendo el index.html principal y dejando
+# que el client-side router de Expo Router resuelva la ruta.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Si el archivo solicitado existe, servirlo tal cual.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Para rutas dinámicas con id (ej. /bitacora/regata-xxx),
+  # caer al index.html de la ruta padre si existe.
+  RewriteRule ^bitacora/[^/]+/?$ /bitacora/index.html [L]
+
+  # Cualquier otra ruta sin match → root index.html (SPA fallback).
+  RewriteRule ^ /index.html [L]
+</IfModule>
+
+# MIME types correctos
+<IfModule mod_mime.c>
+  AddType application/javascript .js
+  AddType application/json .json
+  AddType text/css .css
+  AddType image/svg+xml .svg
+</IfModule>
+
+# Cache largo para assets versionados de Expo (_expo/static/...)
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+</IfModule>
