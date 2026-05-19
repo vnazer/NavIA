@@ -28,4 +28,12 @@ export const TILES = {
       '&copy; <a href="https://openseamap.org">OpenSeaMap</a>',
     minZoom: 12,
   },
+  /** Capa de batimetría (profundidades) de OpenSeaMap basada en GEBCO.
+   *  Cobertura global, resolución ~15 arcsec. Si el endpoint no responde,
+   *  alternativas: EMODNet WMS (Europa) o servir GEBCO local con gdal2tiles. */
+  bathymetry: {
+    url: "https://tiles.openseamap.org/depth/{z}/{x}/{y}.png",
+    atribucion:
+      '&copy; <a href="https://openseamap.org">OpenSeaMap</a> Bathymetry (GEBCO)',
+  },
 };
