@@ -4,7 +4,7 @@
 //
 // Cleanup: cierra el WS al desactivar, limpia barcos sin update >5 min.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type BarcoAis = {
   mmsi: string;
@@ -30,6 +30,23 @@ export function useAisStream({ activo, bbox }: Props) {
 
   const [latMin, lonMin] = bbox[0];
   const [latMax, lonMax] = bbox[1];
+
+  // Debounce del bbox: solo reabrimos el WS si los límites se quedan
+  // estables 800 ms (evita reconectar al hacer pan/zoom continuo, lo
+  // que aisstream.io podría bloquear como abuso).
+  const [bboxDebounced, setBboxDebounced] = useState({
+    latMin,
+    lonMin,
+    latMax,
+    lonMax,
+  });
+  useEffect(() => {
+    const t = setTimeout(
+      () => setBboxDebounced({ latMin, lonMin, latMax, lonMax }),
+      800,
+    );
+    return () => clearTimeout(t);
+  }, [latMin, lonMin, latMax, lonMax]);
 
   useEffect(() => {
     if (!activo) {
@@ -59,8 +76,8 @@ export function useAisStream({ activo, bbox }: Props) {
           Apikey: apiKey,
           BoundingBoxes: [
             [
-              [latMin, lonMin],
-              [latMax, lonMax],
+              [bboxDebounced.latMin, bboxDebounced.lonMin],
+              [bboxDebounced.latMax, bboxDebounced.lonMax],
             ],
           ],
           FilterMessageTypes: ["PositionReport", "ShipStaticData"],
@@ -137,7 +154,14 @@ export function useAisStream({ activo, bbox }: Props) {
       ws.close();
       clearInterval(intervalCleanup);
     };
-  }, [activo, latMin, lonMin, latMax, lonMax]);
+  }, [
+    activo,
+    bboxDebounced.latMin,
+    bboxDebounced.lonMin,
+    bboxDebounced.latMax,
+    bboxDebounced.lonMax,
+  ]);
 
-  return { barcos: Array.from(barcos.values()) };
+  const barcosArray = useMemo(() => Array.from(barcos.values()), [barcos]);
+  return { barcos: barcosArray };
 }

@@ -27,10 +27,13 @@ const TIPOS_NOMBRES: Record<number, string> = {
 
 export function CapaAis({ visible, onCountChange }: Props) {
   const map = useMap();
-  const [bbox, setBbox] = useState<[[number, number], [number, number]]>([
-    [-34, -72],
-    [-32, -71],
-  ]);
+  const [bbox, setBbox] = useState<[[number, number], [number, number]]>(() => {
+    const b = map.getBounds();
+    return [
+      [b.getSouth(), b.getWest()],
+      [b.getNorth(), b.getEast()],
+    ];
+  });
 
   useEffect(() => {
     if (!visible) return;
@@ -58,7 +61,9 @@ export function CapaAis({ visible, onCountChange }: Props) {
 
   return (
     <>
-      {barcos.map((b) => (
+      {barcos
+        .filter((b) => b.lat !== 0 || b.lon !== 0)
+        .map((b) => (
         <Marker
           key={b.mmsi}
           position={[b.lat, b.lon]}
