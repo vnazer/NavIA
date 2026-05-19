@@ -92,12 +92,11 @@ export default function PantallaDetalleSesion() {
 
   const handleExportar = async () => {
     const res = await exportarGpx(sesion);
+    if (res.ok) return; // éxito: web ya inicia descarga, nativo ya abre share sheet
     if (Platform.OS === "web") {
-      if (!res.ok && typeof window !== "undefined") {
-        window.alert(res.mensaje);
-      }
+      if (typeof window !== "undefined") window.alert(res.mensaje);
     } else {
-      Alert.alert(res.ok ? "Listo" : "No se pudo exportar", res.mensaje);
+      Alert.alert("No se pudo exportar", res.mensaje);
     }
   };
 
