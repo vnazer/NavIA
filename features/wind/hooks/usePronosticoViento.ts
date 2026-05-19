@@ -33,13 +33,15 @@ export function usePronosticoViento(): EstadoHook {
   // Suscripción a primitivos del store (estables entre renders)
   const spotId = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
+  const customSpots = useSpotStore((s) => s.customSpots);
 
   // Derivar spot con override aplicado (memo: solo cambia si cambian deps)
   const spot = useMemo(() => {
-    const base = SPOTS.find((s) => s.id === spotId) ?? SPOTS[0];
+    const todos = [...SPOTS, ...customSpots];
+    const base = todos.find((s) => s.id === spotId) ?? SPOTS[0];
     const ov = overrides[base.id];
     return ov ? { ...base, lat: ov.lat, lon: ov.lon } : base;
-  }, [spotId, overrides]);
+  }, [spotId, overrides, customSpots]);
 
   const [pronostico, setPronostico] = useState<Pronostico | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);

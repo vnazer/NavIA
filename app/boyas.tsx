@@ -68,7 +68,7 @@ export default function PantallaBoyas() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
       <View className="flex-row items-center justify-between gap-3 bg-mar-700 p-4">
         <View className="flex-1 flex-row items-center gap-3">
           <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -107,11 +107,11 @@ export default function PantallaBoyas() {
           </Text>
         </Pressable>
 
-        <Text className="px-2 text-center text-xs text-slate-500">
+        <Text className="px-2 text-center text-xs text-slate-500 dark:text-slate-400">
           O entrá al{" "}
           <Text
             onPress={() => router.push("/mapa")}
-            className="font-semibold text-mar-700"
+            className="font-semibold text-mar-700 dark:text-mar-100"
           >
             mapa
           </Text>{" "}
@@ -120,12 +120,12 @@ export default function PantallaBoyas() {
         </Text>
 
         {boyas.length === 0 ? (
-          <View className="mt-2 items-center gap-3 rounded-2xl bg-white p-6">
+          <View className="mt-2 items-center gap-3 rounded-2xl bg-white dark:bg-slate-800 p-6">
             <MapPin size={32} color="#94a3b8" />
-            <Text className="text-base font-semibold text-slate-800">
+            <Text className="text-base font-semibold text-slate-800 dark:text-slate-100">
               No hay boyas marcadas
             </Text>
-            <Text className="text-center text-xs text-slate-500">
+            <Text className="text-center text-xs text-slate-500 dark:text-slate-400">
               Cuando el juez envía las coords, las pegás acá. O las marcás en
               el mapa.
             </Text>
@@ -136,7 +136,7 @@ export default function PantallaBoyas() {
             return (
               <View
                 key={b.id}
-                className="flex-row items-center gap-3 rounded-xl bg-white p-3"
+                className="flex-row items-center gap-3 rounded-xl bg-white dark:bg-slate-800 p-3"
               >
                 <View
                   className="h-10 w-10 items-center justify-center rounded-full"
@@ -145,11 +145,11 @@ export default function PantallaBoyas() {
                   <Text style={{ fontSize: 18 }}>{meta.emoji}</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semibold text-slate-800">
+                  <Text className="font-semibold text-slate-800 dark:text-slate-100">
                     {meta.nombre}
                     {b.label ? ` · ${b.label}` : ""}
                   </Text>
-                  <Text className="font-mono text-xs text-slate-500">
+                  <Text className="font-mono text-xs text-slate-500 dark:text-slate-400">
                     {b.lat.toFixed(5)}, {b.lon.toFixed(5)}
                   </Text>
                 </View>

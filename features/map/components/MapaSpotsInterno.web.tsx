@@ -107,6 +107,7 @@ export default function MapaSpotsInterno() {
   const spotIdActual = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
   const setOverride = useSpotStore((s) => s.setOverride);
+  const customSpots = useSpotStore((s) => s.customSpots);
 
   // Boyas race-day (store global, persistido)
   const boyas = useBoyasStore((s) => s.boyas);
@@ -132,11 +133,11 @@ export default function MapaSpotsInterno() {
   // "Maximum update depth exceeded" porque Zustand compara por Object.is).
   const todosLosSpots = useMemo(
     () =>
-      SPOTS.map((s) => {
+      [...SPOTS, ...customSpots].map((s) => {
         const ov = overrides[s.id];
         return ov ? { ...s, lat: ov.lat, lon: ov.lon } : s;
       }),
-    [overrides],
+    [overrides, customSpots],
   );
 
   const spotActual = useMemo(

@@ -57,7 +57,7 @@ export default function PantallaTactica() {
   const segundosAlStart = timerActivo ? Math.max(0, tiempoRestanteMs / 1000) : 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
       <View className="flex-row items-center gap-3 bg-mar-700 p-4">
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
@@ -103,12 +103,12 @@ export default function PantallaTactica() {
 
         {/* Sin boyas */}
         {boyas.length === 0 && (
-          <View className="items-center gap-3 rounded-2xl bg-white p-6">
+          <View className="items-center gap-3 rounded-2xl bg-white dark:bg-slate-800 p-6">
             <Flag size={32} color="#94a3b8" />
-            <Text className="text-base font-semibold text-slate-800">
+            <Text className="text-base font-semibold text-slate-800 dark:text-slate-100">
               Sin boyas marcadas
             </Text>
-            <Text className="text-center text-xs text-slate-500">
+            <Text className="text-center text-xs text-slate-500 dark:text-slate-400">
               Andá al mapa y marcá al menos una boya (click derecho) para
               activar el modo táctico.
             </Text>
@@ -129,7 +129,7 @@ export default function PantallaTactica() {
         {/* Selector cuando no hay modo activo */}
         {modoActivo === "off" && boyas.length > 0 && (
           <View className="gap-3">
-            <Text className="mt-2 text-sm font-semibold uppercase text-slate-600">
+            <Text className="mt-2 text-sm font-semibold uppercase text-slate-600 dark:text-slate-300">
               Ir a una boya
             </Text>
             {boyas.map((b) => {
@@ -138,7 +138,7 @@ export default function PantallaTactica() {
                 <Pressable
                   key={b.id}
                   onPress={() => activarWaypoint(b.id)}
-                  className="flex-row items-center gap-3 rounded-xl bg-white p-3"
+                  className="flex-row items-center gap-3 rounded-xl bg-white dark:bg-slate-800 p-3"
                 >
                   <View
                     className="h-10 w-10 items-center justify-center rounded-full"
@@ -146,7 +146,7 @@ export default function PantallaTactica() {
                   >
                     <Text style={{ fontSize: 18 }}>{meta.emoji}</Text>
                   </View>
-                  <Text className="flex-1 font-semibold text-slate-900">
+                  <Text className="flex-1 font-semibold text-slate-900 dark:text-white">
                     {meta.nombre}
                     {b.label ? ` · ${b.label}` : ""}
                   </Text>
@@ -155,7 +155,7 @@ export default function PantallaTactica() {
               );
             })}
 
-            <Text className="mt-3 text-sm font-semibold uppercase text-slate-600">
+            <Text className="mt-3 text-sm font-semibold uppercase text-slate-600 dark:text-slate-300">
               Línea de salida
             </Text>
             <SelectorLineaSalida />

@@ -16,6 +16,8 @@ export type Spot = {
   lon: number;
   /** Notas locales: viento dominante, peligros, etc. */
   descripcion?: string;
+  /** True si fue creado por el usuario; false/undefined para los built-in. */
+  custom?: boolean;
 };
 
 /**
