@@ -1,8 +1,13 @@
 // Hook que retorna el estado vivo del race timer.
 // Recalcula cada 250ms sin guardar nada en store (eso vendría a costar).
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRaceTimerStore } from "../store/useRaceTimerStore";
+import {
+  anunciarMinuto,
+  anunciarCountdownFinal,
+  anunciarStart,
+} from "@/lib/voz/servicio";
 
 export type FaseRegata =
   | "off" // timer no activo
@@ -33,6 +38,18 @@ export function useRaceTimer(): EstadoTimer {
   const startTs = useRaceTimerStore((s) => s.startTs);
   const [, setTick] = useState(0);
 
+  // Rastrear segundos y minutos ya anunciados para no repetir
+  const minutosAnunciados = useRef(new Set<number>());
+  const segundosAnunciados = useRef(new Set<number>());
+  const startAnunciado = useRef(false);
+
+  // Resetear registros cuando cambia el startTs
+  useEffect(() => {
+    minutosAnunciados.current = new Set();
+    segundosAnunciados.current = new Set();
+    startAnunciado.current = false;
+  }, [startTs]);
+
   // Forzar re-render cada 250ms cuando timer activo
   useEffect(() => {
     if (!startTs) return;
@@ -49,6 +66,33 @@ export function useRaceTimer(): EstadoTimer {
   }
 
   const restante = startTs - Date.now();
+  const seg = Math.ceil(restante / 1000);
+
+  // Anuncios por minuto (5, 4, 3, 2, 1)
+  for (const min of [5, 4, 3, 2, 1]) {
+    const umbralMs = min * 60 * 1000;
+    if (
+      restante <= umbralMs + 500 &&
+      restante > umbralMs - 500 &&
+      !minutosAnunciados.current.has(min)
+    ) {
+      minutosAnunciados.current.add(min);
+      anunciarMinuto(min);
+    }
+  }
+
+  // Cuenta regresiva final: 10 → 1
+  if (seg >= 1 && seg <= 10 && !segundosAnunciados.current.has(seg)) {
+    segundosAnunciados.current.add(seg);
+    anunciarCountdownFinal(seg);
+  }
+
+  // Start!
+  if (restante <= 0 && restante > -1000 && !startAnunciado.current) {
+    startAnunciado.current = true;
+    anunciarStart();
+  }
+
   return {
     tiempoRestanteMs: restante,
     fase: calcularFase(restante),
