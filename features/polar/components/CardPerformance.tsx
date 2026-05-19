@@ -10,6 +10,7 @@ import { useBarcoStore } from "../store/useBarcoStore";
 import { calcularOptimos } from "../lib/calculos";
 import { SelectorBarco } from "./SelectorBarco";
 import type { PuntoPronostico } from "@/features/wind/types";
+import { useColorPorTema } from "@/lib/tema/colores";
 
 type Props = {
   punto: PuntoPronostico | null;
@@ -17,6 +18,7 @@ type Props = {
 
 export function CardPerformance({ punto }: Props) {
   const barco = useBarcoStore((s) => s.getBarcoActual());
+  const colorWind = useColorPorTema("#334155", "#e2e8f0");
 
   const optimos = useMemo(() => {
     if (!punto) return null;
@@ -93,7 +95,7 @@ export function CardPerformance({ punto }: Props) {
           {/* Link a visualización completa */}
           <Link href="/polar" asChild>
             <Pressable className="flex-row items-center justify-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 p-3">
-              <Wind size={14} color="#334155" />
+              <Wind size={14} color={colorWind} />
               <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Ver diagrama polar completo
               </Text>

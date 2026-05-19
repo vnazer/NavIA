@@ -17,6 +17,7 @@ import { MapPin, RefreshCw, Map, Play, BookOpen, Settings } from "lucide-react-n
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { useColorPorTema } from "@/lib/tema/colores";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
 import { TarjetaAtmosfera } from "@/features/wind/components/TarjetaAtmosfera";
@@ -24,6 +25,7 @@ import { ListaPronostico } from "@/features/wind/components/ListaPronostico";
 import { CardPerformance } from "@/features/polar/components/CardPerformance";
 
 export default function PantallaPrincipal() {
+  const colorSettings = useColorPorTema("#334155", "#e2e8f0");
   // Derivar el spot actual desde primitivos del store para evitar loops
   // de re-render (un selector que devuelve {...spread} causa Maximum
   // update depth exceeded porque Zustand compara por Object.is).
@@ -134,7 +136,7 @@ export default function PantallaPrincipal() {
             </Link>
             <Link href="/configuracion" asChild>
               <Pressable className="flex-row items-center justify-center rounded-xl bg-slate-200 p-3 dark:bg-slate-700">
-                <Settings size={16} color="#334155" />
+                <Settings size={16} color={colorSettings} />
               </Pressable>
             </Link>
           </View>

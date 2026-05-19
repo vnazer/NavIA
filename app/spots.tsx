@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { Check, Plus, Trash2, X, MapPin } from "lucide-react-native";
 import { SPOTS } from "@/features/spots/data/spots";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { useColorPorTema } from "@/lib/tema/colores";
 
 function confirmar(mensaje: string, onAceptar: () => void) {
   if (Platform.OS === "web") {
@@ -40,6 +41,9 @@ export default function PantallaSpots() {
   const customSpots = useSpotStore((s) => s.customSpots);
   const agregarSpotCustom = useSpotStore((s) => s.agregarSpotCustom);
   const eliminarSpotCustom = useSpotStore((s) => s.eliminarSpotCustom);
+  const colorPlus = useColorPorTema("#0e6ba8", "#cffafe");
+  const colorMapPin = useColorPorTema("#0a4d7a", "#e2e8f0");
+  const colorX = useColorPorTema("#64748b", "#cbd5e1");
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [nombre, setNombre] = useState("");
@@ -192,7 +196,7 @@ export default function PantallaSpots() {
           onPress={() => setModalAbierto(true)}
           className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border-2 border-dashed border-mar-500 bg-white p-4 dark:bg-slate-800"
         >
-          <Plus size={18} color="#0e6ba8" />
+          <Plus size={18} color={colorPlus} />
           <Text className="text-sm font-semibold text-mar-700 dark:text-mar-100">
             Agregar spot custom
           </Text>
@@ -209,7 +213,7 @@ export default function PantallaSpots() {
           <View className="rounded-t-2xl bg-white p-5 dark:bg-slate-900">
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                <MapPin size={18} color="#0a4d7a" />
+                <MapPin size={18} color={colorMapPin} />
                 <Text className="text-lg font-semibold text-slate-900 dark:text-white">
                   Nuevo spot
                 </Text>
@@ -220,7 +224,7 @@ export default function PantallaSpots() {
                 accessibilityLabel="Cerrar"
                 accessibilityRole="button"
               >
-                <X size={22} color="#64748b" />
+                <X size={22} color={colorX} />
               </Pressable>
             </View>
 

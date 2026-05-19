@@ -27,10 +27,12 @@ import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { MapaRegata } from "@/features/boyas/components/MapaRegata";
 import { ListaBoyasNavegacion } from "@/features/boyas/components/ListaBoyasNavegacion";
 import { MenuRapido } from "@/components/MenuRapido";
+import { useColorPorTema } from "@/lib/tema/colores";
 
 export default function PantallaRegata() {
   const router = useRouter();
   const barco = useBarcoStore((s) => s.getBarcoActual());
+  const colorIconoClaro = useColorPorTema("#334155", "#e2e8f0");
 
   const spotId = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
@@ -131,7 +133,7 @@ export default function PantallaRegata() {
             </View>
             <Link href="/boyas" asChild>
               <Pressable className="flex-row items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5">
-                <Edit3 size={12} color="#334155" />
+                <Edit3 size={12} color={colorIconoClaro} />
                 <Text className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                   Editar
                 </Text>
