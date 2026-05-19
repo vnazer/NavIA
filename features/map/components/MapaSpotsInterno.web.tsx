@@ -37,6 +37,10 @@ import { PopupBoya } from "@/features/boyas/components/PopupBoya";
 import { ModalAgregarBoya } from "@/features/boyas/components/ModalAgregarBoya.web";
 import type { TipoBoya } from "@/features/boyas/types";
 import { useTacticaStore } from "@/features/regata/store/useTacticaStore";
+import { useRainviewerFrames } from "../hooks/useRainviewerFrames";
+import { CapaLluviaTiles } from "./CapaLluviaTiles.web";
+import { IndicadorLluvia } from "./IndicadorLluvia";
+import { ToggleLluvia } from "./ToggleLluvia";
 
 const LONG_PRESS_MS = 600;
 
@@ -140,6 +144,10 @@ export default function MapaSpotsInterno() {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [coordsPendientes, setCoordsPendientes] =
     useState<CoordsPendientes>(null);
+  const [lluviaVisible, setLluviaVisible] = useState(false);
+
+  // Frames de RainViewer animados (Prompt 9)
+  const lluvia = useRainviewerFrames(lluviaVisible);
 
   const indiceAhora = useMemo(() => {
     if (!pronosticoGrid?.puntos[0]?.puntos.length) return null;
@@ -211,6 +219,11 @@ export default function MapaSpotsInterno() {
           attribution={TILES.seamark.atribucion}
         />
 
+        {/* Capa lluvia radar (Prompt 9) — debajo del seamark para no taparlo */}
+        {lluviaVisible && lluvia.host && lluvia.frameActual && (
+          <CapaLluviaTiles host={lluvia.host} frame={lluvia.frameActual} />
+        )}
+
         <CapturadorLongPress onLongPress={handleLongPress} />
 
         <CapaVientoMapa
@@ -278,6 +291,19 @@ export default function MapaSpotsInterno() {
         activo={modoEdicion}
         onToggle={() => setModoEdicion(!modoEdicion)}
       />
+
+      <ToggleLluvia
+        activo={lluviaVisible}
+        onToggle={() => setLluviaVisible(!lluviaVisible)}
+      />
+
+      {/* Indicador con la hora del frame de RainViewer (Prompt 9) */}
+      {lluviaVisible && lluvia.frameActual && (
+        <IndicadorLluvia
+          timestampSeg={lluvia.frameActual.time}
+          esNowcast={lluvia.esNowcast}
+        />
+      )}
 
       {/* Banner instructivo cuando modo edición está activo */}
       {modoEdicion && (

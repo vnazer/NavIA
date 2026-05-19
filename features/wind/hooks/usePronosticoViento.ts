@@ -23,7 +23,10 @@ type EstadoHook = {
 const TTL_MINUTOS = 30;
 
 function clavePersistencia(spotId: string) {
-  return `navia-pronostico-${spotId}`;
+  // v2 (Prompt 9): nuevos campos atmosféricos en el shape de Pronostico.
+  // El cache v1 queda huérfano en AsyncStorage pero no rompe (los users
+  // simplemente refetchean al primer load).
+  return `navia-pronostico-v2-${spotId}`;
 }
 
 export function usePronosticoViento(): EstadoHook {

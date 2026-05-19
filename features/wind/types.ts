@@ -11,6 +11,23 @@ export type PuntoPronostico = {
   direccionGrados: number;
   /** Temperatura del aire a 2m en °C */
   temperaturaC: number;
+  // === Prompt 9: variables atmosféricas adicionales ===
+  /** Presión a nivel del mar en hPa (pressure_msl) */
+  presionHpa?: number;
+  /** Índice UV (uv_index, escala 0-11+) */
+  uv?: number;
+  /** Precipitación acumulada en mm */
+  precipitacionMm?: number;
+  /** Probabilidad de precipitación en % */
+  probLluvia?: number;
+  /** Visibilidad horizontal en metros */
+  visibilidadMt?: number;
+  /** Cobertura nubosa en % */
+  nubosidad?: number;
+  /** CAPE (Convective Available Potential Energy) J/kg — alta = inestabilidad atmosférica */
+  cape?: number;
+  /** Altura de ola significativa en metros (marine-api) */
+  olaMt?: number;
 };
 
 export type Pronostico = {

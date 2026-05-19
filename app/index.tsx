@@ -19,6 +19,7 @@ import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
+import { TarjetaAtmosfera } from "@/features/wind/components/TarjetaAtmosfera";
 import { ListaPronostico } from "@/features/wind/components/ListaPronostico";
 import { CardPerformance } from "@/features/polar/components/CardPerformance";
 
@@ -163,6 +164,17 @@ export default function PantallaPrincipal() {
           <TarjetaCondicionActual
             punto={puntoSeleccionado}
             label={labelBloque}
+          />
+        )}
+
+        {/* NUEVO en Prompt 9: condiciones atmosféricas extra */}
+        {puntoSeleccionado && pronostico && indiceSeleccionado !== null && (
+          <TarjetaAtmosfera
+            punto={puntoSeleccionado}
+            proximas3hr={pronostico.puntos.slice(
+              indiceSeleccionado,
+              indiceSeleccionado + 4,
+            )}
           />
         )}
 
