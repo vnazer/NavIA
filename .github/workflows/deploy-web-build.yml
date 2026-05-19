@@ -83,7 +83,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: web-build
-          force_orphan: true
+          # NO usar force_orphan: true. Eso hace force-push y rompe el
+          # git pull de Hostinger ("divergent branches"). En su lugar,
+          # commits incrementales sobre la rama existente (fast-forward).
+          # La rama web-build crece linealmente, lo que es bien — son
+          # pocos KB por commit y se puede squashear cada N meses si crece.
+          keep_files: false
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
           commit_message: "deploy: ${{ github.event.head_commit.message }}"
