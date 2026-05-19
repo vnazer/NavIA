@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { View, Text, Pressable, Modal } from "react-native";
 import { useRouter } from "expo-router";
+import { useTemaStore } from "@/lib/tema/store";
 import {
   Menu,
   X,
@@ -44,7 +45,9 @@ type Props = {
 
 export function MenuRapido({ color = "white" }: Props) {
   const router = useRouter();
+  const oscuro = useTemaStore((s) => s.oscuro);
   const [abierto, setAbierto] = useState(false);
+  const colorCerrar = oscuro ? "#cbd5e1" : "#475569";
 
   const ir = (href: string) => {
     setAbierto(false);
@@ -54,7 +57,12 @@ export function MenuRapido({ color = "white" }: Props) {
 
   return (
     <>
-      <Pressable onPress={() => setAbierto(true)} hitSlop={12}>
+      <Pressable
+        onPress={() => setAbierto(true)}
+        hitSlop={12}
+        accessibilityLabel="Abrir menú de navegación"
+        accessibilityRole="button"
+      >
         <Menu size={24} color={color} />
       </Pressable>
 
@@ -76,8 +84,13 @@ export function MenuRapido({ color = "white" }: Props) {
               <Text className="text-lg font-semibold text-slate-900 dark:text-white">
                 Navegación
               </Text>
-              <Pressable onPress={() => setAbierto(false)} hitSlop={12}>
-                <X size={22} color="#475569" />
+              <Pressable
+                onPress={() => setAbierto(false)}
+                hitSlop={12}
+                accessibilityLabel="Cerrar menú"
+                accessibilityRole="button"
+              >
+                <X size={22} color={colorCerrar} />
               </Pressable>
             </View>
 
