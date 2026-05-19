@@ -1,8 +1,11 @@
-// WebSocket cliente para aisstream.io. Se conecta solo cuando `activo`
-// y mantiene un Map de barcos vistos en el bbox suministrado. Combina
-// PositionReport (lat/lon/sog/cog) con ShipStaticData (nombre/destino/tipo).
+// WebSocket cliente para aisstream.io.
 //
-// Cleanup: cierra el WS al desactivar, limpia barcos sin update >5 min.
+// Estrategia (anti-loop):
+// - Una sola conexión WS mientras `activo`. NO se reabre al cambiar el bbox.
+// - Cambios de bbox debouncean 1.5 s y se aplican como mensaje de re-suscripción
+//   sobre la misma conexión (aisstream lo soporta).
+// - Mensajes entrantes se acumulan en un ref y se flushean a state cada 1 s
+//   (evita ~100 setState/seg que ahogan a React).
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,36 +21,44 @@ export type BarcoAis = {
   ultimaActualizacion: number;
 };
 
+type Bbox = [[number, number], [number, number]];
+
 type Props = {
   activo: boolean;
-  /** [[latMin, lonMin], [latMax, lonMax]] */
-  bbox: [[number, number], [number, number]];
+  bbox: Bbox | null;
 };
+
+function buildSuscripcion(apiKey: string, bbox: Bbox) {
+  return JSON.stringify({
+    Apikey: apiKey,
+    BoundingBoxes: [
+      [
+        [bbox[0][0], bbox[0][1]],
+        [bbox[1][0], bbox[1][1]],
+      ],
+    ],
+    FilterMessageTypes: ["PositionReport", "ShipStaticData"],
+  });
+}
 
 export function useAisStream({ activo, bbox }: Props) {
   const [barcos, setBarcos] = useState<Map<string, BarcoAis>>(new Map());
   const wsRef = useRef<WebSocket | null>(null);
-
-  const [latMin, lonMin] = bbox[0];
-  const [latMax, lonMax] = bbox[1];
-
-  // Debounce del bbox: solo reabrimos el WS si los límites se quedan
-  // estables 800 ms (evita reconectar al hacer pan/zoom continuo, lo
-  // que aisstream.io podría bloquear como abuso).
-  const [bboxDebounced, setBboxDebounced] = useState({
-    latMin,
-    lonMin,
-    latMax,
-    lonMax,
-  });
+  const bufferRef = useRef<Map<string, BarcoAis>>(new Map());
+  const bboxRef = useRef<Bbox | null>(bbox);
   useEffect(() => {
-    const t = setTimeout(
-      () => setBboxDebounced({ latMin, lonMin, latMax, lonMax }),
-      800,
-    );
-    return () => clearTimeout(t);
-  }, [latMin, lonMin, latMax, lonMax]);
+    bboxRef.current = bbox;
+  }, [bbox]);
 
+  // Debounce del bbox: solo dispara re-suscripción cuando se queda estable.
+  const bboxKey = bbox ? `${bbox[0][0]},${bbox[0][1]},${bbox[1][0]},${bbox[1][1]}` : "";
+  const [bboxKeyDebounced, setBboxKeyDebounced] = useState(bboxKey);
+  useEffect(() => {
+    const t = setTimeout(() => setBboxKeyDebounced(bboxKey), 1500);
+    return () => clearTimeout(t);
+  }, [bboxKey]);
+
+  // Conexión WS — depende SOLO de `activo`. Bbox cambia ⇒ re-subscribe sin cerrar.
   useEffect(() => {
     if (!activo) {
       if (wsRef.current) {
@@ -55,6 +66,7 @@ export function useAisStream({ activo, bbox }: Props) {
         wsRef.current = null;
       }
       setBarcos(new Map());
+      bufferRef.current = new Map();
       return;
     }
 
@@ -71,18 +83,8 @@ export function useAisStream({ activo, bbox }: Props) {
 
     ws.onopen = () => {
       console.log("[AIS] WebSocket conectado");
-      ws.send(
-        JSON.stringify({
-          Apikey: apiKey,
-          BoundingBoxes: [
-            [
-              [bboxDebounced.latMin, bboxDebounced.lonMin],
-              [bboxDebounced.latMax, bboxDebounced.lonMax],
-            ],
-          ],
-          FilterMessageTypes: ["PositionReport", "ShipStaticData"],
-        }),
-      );
+      const actual = bboxRef.current;
+      if (actual) ws.send(buildSuscripcion(apiKey, actual));
     };
 
     ws.onmessage = (event) => {
@@ -92,38 +94,34 @@ export function useAisStream({ activo, bbox }: Props) {
         const mmsi = String(msg.MetaData?.MMSI ?? "");
         if (!mmsi) return;
 
-        setBarcos((prev) => {
-          const nuevo = new Map(prev);
-          const existente = nuevo.get(mmsi);
-
-          if (tipo === "PositionReport") {
-            const pr = msg.Message.PositionReport;
-            nuevo.set(mmsi, {
-              mmsi,
-              nombre: existente?.nombre,
-              destino: existente?.destino,
-              tipoBarco: existente?.tipoBarco,
-              lat: pr.Latitude,
-              lon: pr.Longitude,
-              sogKts: pr.Sog,
-              cogGrados: pr.Cog,
-              ultimaActualizacion: Date.now(),
-            });
-          } else if (tipo === "ShipStaticData") {
-            const sd = msg.Message.ShipStaticData;
-            nuevo.set(mmsi, {
-              ...existente,
-              mmsi,
-              lat: existente?.lat ?? 0,
-              lon: existente?.lon ?? 0,
-              nombre: sd.Name?.trim(),
-              destino: sd.Destination?.trim(),
-              tipoBarco: sd.Type,
-              ultimaActualizacion: existente?.ultimaActualizacion ?? Date.now(),
-            });
-          }
-          return nuevo;
-        });
+        const buffer = bufferRef.current;
+        const existente = buffer.get(mmsi);
+        if (tipo === "PositionReport") {
+          const pr = msg.Message.PositionReport;
+          buffer.set(mmsi, {
+            mmsi,
+            nombre: existente?.nombre,
+            destino: existente?.destino,
+            tipoBarco: existente?.tipoBarco,
+            lat: pr.Latitude,
+            lon: pr.Longitude,
+            sogKts: pr.Sog,
+            cogGrados: pr.Cog,
+            ultimaActualizacion: Date.now(),
+          });
+        } else if (tipo === "ShipStaticData") {
+          const sd = msg.Message.ShipStaticData;
+          buffer.set(mmsi, {
+            ...existente,
+            mmsi,
+            lat: existente?.lat ?? 0,
+            lon: existente?.lon ?? 0,
+            nombre: sd.Name?.trim(),
+            destino: sd.Destination?.trim(),
+            tipoBarco: sd.Type,
+            ultimaActualizacion: existente?.ultimaActualizacion ?? Date.now(),
+          });
+        }
       } catch (err) {
         console.error("[AIS] Error parseando mensaje:", err);
       }
@@ -137,30 +135,36 @@ export function useAisStream({ activo, bbox }: Props) {
       console.log("[AIS] WebSocket cerrado");
     };
 
-    const intervalCleanup = setInterval(() => {
-      setBarcos((prev) => {
-        const ahora = Date.now();
-        const filtrado = new Map<string, BarcoAis>();
-        for (const [k, v] of prev) {
-          if (ahora - v.ultimaActualizacion < 5 * 60 * 1000 && v.lat !== 0) {
-            filtrado.set(k, v);
-          }
+    // Flush periódico del buffer al state (1 vez por segundo).
+    const intervalFlush = setInterval(() => {
+      const ahora = Date.now();
+      const buffer = bufferRef.current;
+      const limpio = new Map<string, BarcoAis>();
+      for (const [k, v] of buffer) {
+        if (ahora - v.ultimaActualizacion < 5 * 60 * 1000) {
+          limpio.set(k, v);
         }
-        return filtrado;
-      });
-    }, 30000);
+      }
+      bufferRef.current = limpio;
+      setBarcos(new Map(limpio));
+    }, 1000);
 
     return () => {
       ws.close();
-      clearInterval(intervalCleanup);
+      wsRef.current = null;
+      clearInterval(intervalFlush);
     };
-  }, [
-    activo,
-    bboxDebounced.latMin,
-    bboxDebounced.lonMin,
-    bboxDebounced.latMax,
-    bboxDebounced.lonMax,
-  ]);
+  }, [activo]);
+
+  // Re-suscribir cuando el bbox debounced cambia y el WS está abierto.
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const apiKey = process.env.EXPO_PUBLIC_AISSTREAM_API_KEY;
+    const actual = bboxRef.current;
+    if (!apiKey || !actual) return;
+    ws.send(buildSuscripcion(apiKey, actual));
+  }, [bboxKeyDebounced]);
 
   const barcosArray = useMemo(() => Array.from(barcos.values()), [barcos]);
   return { barcos: barcosArray };
