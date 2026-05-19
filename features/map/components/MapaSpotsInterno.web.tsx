@@ -214,15 +214,22 @@ export default function MapaSpotsInterno() {
         scrollWheelZoom={true}
       >
         <TileLayer url={TILES.base.url} attribution={TILES.base.atribucion} />
-        <TileLayer
-          url={TILES.seamark.url}
-          attribution={TILES.seamark.atribucion}
-        />
 
-        {/* Capa lluvia radar (Prompt 9) — debajo del seamark para no taparlo */}
+        {/* Capa lluvia radar (Prompt 9) — va antes que seamark para que las
+            marcas náuticas queden visibles por encima del radar. */}
         {lluviaVisible && lluvia.host && lluvia.frameActual && (
           <CapaLluviaTiles host={lluvia.host} frame={lluvia.frameActual} />
         )}
+
+        {/* OpenSeaMap solo renderiza seamarks a partir de zoom ~10. Pedir
+            tiles por debajo de eso devuelve PNGs "Zoom Level Not Supported"
+            que tapan el mapa. Limitamos con minZoom para evitarlo. */}
+        <TileLayer
+          url={TILES.seamark.url}
+          attribution={TILES.seamark.atribucion}
+          minZoom={TILES.seamark.minZoom}
+          maxZoom={MAPA_CONFIG.zoomMax}
+        />
 
         <CapturadorLongPress onLongPress={handleLongPress} />
 
