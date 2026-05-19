@@ -43,6 +43,10 @@ import { IndicadorLluvia } from "./IndicadorLluvia";
 import { ToggleLluvia } from "./ToggleLluvia";
 import { CapaViento } from "./CapaViento.web";
 import { ControlViento } from "./ControlViento.web";
+import { CapaProfundidad } from "./CapaProfundidad.web";
+import { ControlProfundidad } from "./ControlProfundidad.web";
+import { CapaAis } from "@/features/ais/components/CapaAis.web";
+import { ControlAis } from "@/features/ais/components/ControlAis.web";
 
 const LONG_PRESS_MS = 600;
 
@@ -149,6 +153,9 @@ export default function MapaSpotsInterno() {
   const [lluviaVisible, setLluviaVisible] = useState(false);
   const [vientoStreamVisible, setVientoStreamVisible] = useState(false);
   const [horasVientoStream, setHorasVientoStream] = useState(0);
+  const [profundidadVisible, setProfundidadVisible] = useState(false);
+  const [aisVisible, setAisVisible] = useState(false);
+  const [aisCount, setAisCount] = useState(0);
 
   // Frames de RainViewer animados (Prompt 9)
   const lluvia = useRainviewerFrames(lluviaVisible);
@@ -231,6 +238,12 @@ export default function MapaSpotsInterno() {
           horasAdelante={horasVientoStream}
         />
 
+        {/* Capa batimetría (Prompt 11) */}
+        <CapaProfundidad visible={profundidadVisible} />
+
+        {/* Capa AIS (Prompt 11) */}
+        <CapaAis visible={aisVisible} onCountChange={setAisCount} />
+
         {/* OpenSeaMap solo renderiza seamarks a partir de zoom ~10. Pedir
             tiles por debajo de eso devuelve PNGs "Zoom Level Not Supported"
             que tapan el mapa. Limitamos con minZoom para evitarlo. */}
@@ -309,6 +322,17 @@ export default function MapaSpotsInterno() {
       <ControlCapaViento
         activa={capaVientoVisible}
         onToggle={() => setCapaVientoVisible(!capaVientoVisible)}
+      />
+
+      <ControlProfundidad
+        visible={profundidadVisible}
+        onToggle={() => setProfundidadVisible(!profundidadVisible)}
+      />
+
+      <ControlAis
+        visible={aisVisible}
+        cantidadBarcos={aisCount}
+        onToggle={() => setAisVisible(!aisVisible)}
       />
 
       <ControlModoEdicion
