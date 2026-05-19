@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, RefreshCw, Map, Play, BookOpen } from "lucide-react-native";
+import { MapPin, RefreshCw, Map, Play, BookOpen, Settings } from "lucide-react-native";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
@@ -128,6 +128,11 @@ export default function PantallaPrincipal() {
                 <Text className="text-xs font-semibold text-white">
                   Bitácora
                 </Text>
+              </Pressable>
+            </Link>
+            <Link href="/configuracion" asChild>
+              <Pressable className="flex-row items-center justify-center rounded-xl bg-slate-200 p-3">
+                <Settings size={16} color="#334155" />
               </Pressable>
             </Link>
           </View>

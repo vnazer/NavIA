@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Trash2 } from "lucide-react-native";
+import { ChevronLeft, Trash2, Download } from "lucide-react-native";
+import { exportarGpx } from "@/lib/gpx/exportar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useRegataStore } from "@/features/regata/store/useRegataStore";
@@ -102,9 +103,14 @@ export default function PantallaDetalleSesion() {
             <Text className="text-xs text-white opacity-80">{fecha}</Text>
           </View>
         </View>
-        <Pressable onPress={handleEliminar} hitSlop={12}>
-          <Trash2 size={20} color="white" />
-        </Pressable>
+        <View className="flex-row items-center gap-3">
+          <Pressable onPress={() => exportarGpx(sesion)} hitSlop={12}>
+            <Download size={20} color="white" />
+          </Pressable>
+          <Pressable onPress={handleEliminar} hitSlop={12}>
+            <Trash2 size={20} color="white" />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-4">
