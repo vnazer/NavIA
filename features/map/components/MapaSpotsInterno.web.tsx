@@ -42,7 +42,7 @@ import { CapaLluviaTiles } from "./CapaLluviaTiles.web";
 import { IndicadorLluvia } from "./IndicadorLluvia";
 import { ToggleLluvia } from "./ToggleLluvia";
 import { CapaViento } from "./CapaViento.web";
-import { ControlViento } from "./ControlViento";
+import { ControlViento } from "./ControlViento.web";
 
 const LONG_PRESS_MS = 600;
 

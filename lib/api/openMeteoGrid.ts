@@ -46,15 +46,25 @@ export async function fetchGridViento(
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lats.join(",")}` +
     `&longitude=${lons.join(",")}` +
-    `&hourly=wind_speed_10m,wind_direction_10m&forecast_days=2&timezone=auto&windspeed_unit=kn`;
+    `&hourly=wind_speed_10m,wind_direction_10m&forecast_days=2&timezone=UTC&windspeed_unit=kn`;
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Open-Meteo grid no responde: ${res.status}`);
   const data = await res.json();
   const arr = Array.isArray(data) ? data : [data];
 
+  // El array `time` viene en UTC. Buscamos la hora actual UTC truncada a la
+  // hora para que `horasAdelante` sea un offset real desde "ahora", no desde
+  // las 00:00 UTC del día actual.
+  const ahoraISO = new Date().toISOString().slice(0, 13) + ":00";
+  const times: string[] = arr[0]?.hourly?.time ?? [];
+  const idxAhora = Math.max(0, times.indexOf(ahoraISO));
+
   const celdas: CeldaViento[] = arr.map((p, idx) => {
-    const i = Math.min(horasAdelante, (p.hourly?.time?.length ?? 1) - 1);
+    const i = Math.min(
+      idxAhora + horasAdelante,
+      (p.hourly?.time?.length ?? 1) - 1,
+    );
     return {
       lat: lats[idx],
       lon: lons[idx],
@@ -64,7 +74,8 @@ export async function fetchGridViento(
   });
 
   const horaIso =
-    arr[0]?.hourly?.time?.[horasAdelante] ?? new Date().toISOString();
+    arr[0]?.hourly?.time?.[idxAhora + horasAdelante] ??
+    new Date().toISOString();
 
   return {
     celdas,
@@ -99,7 +110,7 @@ export function gridAGribJson(grid: GridViento) {
   const headerBase = {
     discipline: 0,
     disciplineName: "Meteorological products",
-    refTime: new Date().toISOString(),
+    refTime: grid.hora,
     parameterCategory: 2,
     parameterCategoryName: "Momentum",
     lo1: grid.lonMin,

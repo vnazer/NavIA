@@ -24,7 +24,7 @@ type Props = {
 export function CapaViento({ visible, horasAdelante }: Props) {
   const map = useMap();
   const spot = useSpotStore((s) => s.getSpotActual());
-  const layerRef = useRef<any>(null);
+  const layerRef = useRef<L.Layer | null>(null);
 
   useEffect(() => {
     let cancelado = false;
