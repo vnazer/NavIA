@@ -1,4 +1,4 @@
-// Tiles batimétricos de OpenSeaMap (GEBCO). Se monta dentro del MapContainer.
+// Overlay batimétrico: Esri World Ocean Reference (cobertura global).
 
 import { TileLayer } from "react-leaflet";
 import { TILES } from "../data/config";
@@ -13,8 +13,7 @@ export function CapaProfundidad({ visible }: Props) {
     <TileLayer
       url={TILES.bathymetry.url}
       attribution={TILES.bathymetry.atribucion}
-      opacity={0.6}
-      maxZoom={14}
+      opacity={0.85}
     />
   );
 }
