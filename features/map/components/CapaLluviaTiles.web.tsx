@@ -18,7 +18,7 @@ export function CapaLluviaTiles({ host, frame }: Props) {
       url={urlTileRainViewer(host, frame.path)}
       opacity={0.7}
       attribution='Radar &copy; <a href="https://rainviewer.com">RainViewer</a>'
-      maxNativeZoom={10}
+      maxNativeZoom={12}
       maxZoom={18}
     />
   );
