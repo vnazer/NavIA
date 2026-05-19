@@ -37,3 +37,18 @@
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/jpeg "access plus 1 month"
 </IfModule>
+
+# Headers explícitos de Cache-Control (más universal que mod_expires).
+# HTML nunca se cachea — siempre se chequea contra el server para que
+# un deploy nuevo se vea de inmediato. Los JS/CSS de Expo tienen hash
+# en el nombre, así que son immutables y se cachean por 1 año.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  <FilesMatch "_expo/static/.*\.(js|css|png|jpg|jpeg|svg|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
