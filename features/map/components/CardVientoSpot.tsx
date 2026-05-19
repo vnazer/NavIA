@@ -95,6 +95,57 @@ export function CardVientoSpot({ spot, punto, esAhora }: Props) {
       >
         Fuerza {beaufort.fuerza} · {beaufort.nombre}
       </div>
+
+      <FilaAtmosfera punto={punto} txtColor={txtColor} />
+    </div>
+  );
+}
+
+function FilaAtmosfera({
+  punto,
+  txtColor,
+}: {
+  punto: PuntoPronostico;
+  txtColor: string;
+}) {
+  const items: { label: string; valor: string }[] = [];
+  if (punto.presionHpa != null)
+    items.push({ label: "Presión", valor: `${Math.round(punto.presionHpa)} hPa` });
+  if (punto.uv != null)
+    items.push({ label: "UV", valor: punto.uv.toFixed(1) });
+  if (punto.visibilidadMt != null)
+    items.push({
+      label: "Visib.",
+      valor: `${Math.round(punto.visibilidadMt / 1000)} km`,
+    });
+  if (punto.probLluvia != null)
+    items.push({ label: "Lluvia", valor: `${Math.round(punto.probLluvia)}%` });
+  if (punto.olaMt != null)
+    items.push({ label: "Ola", valor: `${punto.olaMt.toFixed(1)} m` });
+
+  if (items.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        paddingTop: 8,
+        borderTop: `1px solid ${txtColor === "#fff" ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)"}`,
+        display: "grid",
+        gridTemplateColumns: "repeat(2, 1fr)",
+        gap: "4px 12px",
+        fontSize: 11,
+      }}
+    >
+      {items.map((it) => (
+        <div
+          key={it.label}
+          style={{ display: "flex", justifyContent: "space-between", gap: 6 }}
+        >
+          <span style={{ opacity: 0.75 }}>{it.label}</span>
+          <span style={{ fontWeight: 600 }}>{it.valor}</span>
+        </div>
+      ))}
     </div>
   );
 }
