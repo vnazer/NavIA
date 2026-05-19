@@ -22,6 +22,7 @@ import { useTrackingGPS } from "@/features/regata/hooks/useTrackingGPS";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { calcularRendimiento } from "@/features/regata/lib/calculosNavegacion";
 import { CardRendimiento } from "@/features/regata/components/CardRendimiento";
+import { PanelShifts } from "@/features/regata/components/PanelShifts";
 import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { MapaRegata } from "@/features/boyas/components/MapaRegata";
 import { ListaBoyasNavegacion } from "@/features/boyas/components/ListaBoyasNavegacion";
@@ -39,6 +40,7 @@ export default function PantallaRegata() {
   }, [spotId, overrides]);
 
   const { pronostico } = usePronosticoViento();
+  // pronostico también se pasa a PanelShifts para histórico de shifts
   const sesion = useRegataStore((s) => s.sesionActiva);
   const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
   const terminarSesion = useRegataStore((s) => s.terminarSesion);
@@ -244,6 +246,15 @@ export default function PantallaRegata() {
           <CardRendimiento
             rendimiento={rendimiento}
             tws={vientoActual.velocidadNudos}
+          />
+        )}
+
+        {/* Shifts de viento: siempre visible cuando hay pronóstico */}
+        {pronostico && (
+          <PanelShifts
+            pronostico={pronostico}
+            sesionFechaInicio={sesion?.fechaInicio ?? null}
+            twdActual={vientoActual?.direccionGrados ?? null}
           />
         )}
 

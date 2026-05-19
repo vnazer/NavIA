@@ -47,6 +47,8 @@ import { CapaProfundidad } from "./CapaProfundidad.web";
 import { ControlProfundidad } from "./ControlProfundidad.web";
 import { CapaAis } from "@/features/ais/components/CapaAis.web";
 import { ControlAis } from "@/features/ais/components/ControlAis.web";
+import { calcularLaylines } from "@/features/regata/lib/laylines";
+import { ControlLaylines } from "@/features/regata/components/ControlLaylines.web";
 
 const LONG_PRESS_MS = 600;
 
@@ -156,6 +158,7 @@ export default function MapaSpotsInterno() {
   const [profundidadVisible, setProfundidadVisible] = useState(false);
   const [aisVisible, setAisVisible] = useState(false);
   const [aisCount, setAisCount] = useState(0);
+  const [laylinesVisible, setLaylinesVisible] = useState(false);
 
   // Frames de RainViewer animados (Prompt 9)
   const lluvia = useRainviewerFrames(lluviaVisible);
@@ -194,6 +197,17 @@ export default function MapaSpotsInterno() {
   })();
 
   const esAhora = indiceAhora !== null && indiceHoraSeguro === indiceAhora;
+
+  // Laylines: marca de barlovento + TWD actual del spot (Prompt 12)
+  const laylines = useMemo(() => {
+    if (!laylinesVisible) return null;
+    const marcaBarlovento = boyas.find((b) => b.tipo === "windward");
+    if (!marcaBarlovento || !puntoSpotEnHora) return null;
+    return calcularLaylines(
+      { lat: marcaBarlovento.lat, lon: marcaBarlovento.lon },
+      puntoSpotEnHora.direccionGrados,
+    );
+  }, [laylinesVisible, boyas, puntoSpotEnHora]);
 
   // Handler para cuando se suelta un marcador arrastrado
   const handleDragEnd = (spotId: string) => (e: L.LeafletEvent) => {
@@ -310,6 +324,30 @@ export default function MapaSpotsInterno() {
             }}
           />
         )}
+
+        {/* Laylines de ceñida (Prompt 12) */}
+        {laylines && (
+          <>
+            <Polyline
+              positions={laylines.estribor}
+              pathOptions={{
+                color: "#16a34a",
+                weight: 2,
+                dashArray: "8 5",
+                opacity: 0.85,
+              }}
+            />
+            <Polyline
+              positions={laylines.babor}
+              pathOptions={{
+                color: "#dc2626",
+                weight: 2,
+                dashArray: "8 5",
+                opacity: 0.85,
+              }}
+            />
+          </>
+        )}
       </MapContainer>
 
       <ControlViento
@@ -343,6 +381,12 @@ export default function MapaSpotsInterno() {
       <ToggleLluvia
         activo={lluviaVisible}
         onToggle={() => setLluviaVisible(!lluviaVisible)}
+      />
+
+      <ControlLaylines
+        visible={laylinesVisible}
+        onToggle={() => setLaylinesVisible(!laylinesVisible)}
+        top={304}
       />
 
       {/* Indicador con la hora del frame de RainViewer (Prompt 9) */}
