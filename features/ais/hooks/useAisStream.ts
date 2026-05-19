@@ -46,7 +46,9 @@ export function useAisStream({ activo, bbox }: Props) {
   const wsRef = useRef<WebSocket | null>(null);
   const bufferRef = useRef<Map<string, BarcoAis>>(new Map());
   const bboxRef = useRef<Bbox | null>(bbox);
-  bboxRef.current = bbox;
+  useEffect(() => {
+    bboxRef.current = bbox;
+  }, [bbox]);
 
   // Debounce del bbox: solo dispara re-suscripción cuando se queda estable.
   const bboxKey = bbox ? `${bbox[0][0]},${bbox[0][1]},${bbox[1][0]},${bbox[1][1]}` : "";
