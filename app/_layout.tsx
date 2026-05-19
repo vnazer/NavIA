@@ -7,6 +7,16 @@ import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "nativewind";
 import { useTemaStore } from "@/lib/tema/store";
 import { useVozStore } from "@/lib/voz/servicio";
+import { View } from "react-native";
+import { MenuRapido } from "@/components/MenuRapido";
+
+const headerConMenu = {
+  headerRight: () => (
+    <View style={{ paddingRight: 12 }}>
+      <MenuRapido />
+    </View>
+  ),
+};
 
 export default function RootLayout() {
   const { setColorScheme } = useColorScheme();
@@ -33,9 +43,18 @@ export default function RootLayout() {
           headerTitleStyle: { fontWeight: "600" },
         }}
       >
-        <Stack.Screen name="index" options={{ title: "NavIA" }} />
-        <Stack.Screen name="spots" options={{ title: "Elegir spot" }} />
-        <Stack.Screen name="mapa" options={{ title: "Mapa de spots" }} />
+        <Stack.Screen
+          name="index"
+          options={{ title: "NavIA", ...headerConMenu }}
+        />
+        <Stack.Screen
+          name="spots"
+          options={{ title: "Elegir spot", ...headerConMenu }}
+        />
+        <Stack.Screen
+          name="mapa"
+          options={{ title: "Mapa de spots", ...headerConMenu }}
+        />
         <Stack.Screen name="polar" options={{ headerShown: false }} />
         <Stack.Screen name="regata" options={{ headerShown: false }} />
         <Stack.Screen name="boyas" options={{ headerShown: false }} />

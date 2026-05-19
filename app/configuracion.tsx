@@ -4,8 +4,9 @@ import { View, Text, Pressable, Switch, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Volume2, Moon } from "lucide-react-native";
-import { useVozStore } from "@/lib/voz/servicio";
+import { useVozStore, desbloquearVoz, decir } from "@/lib/voz/servicio";
 import { useTemaStore } from "@/lib/tema/store";
+import { MenuRapido } from "@/components/MenuRapido";
 
 function FilaConfig({
   icono,
@@ -53,7 +54,8 @@ export default function PantallaConfiguracion() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
         </Pressable>
-        <Text className="text-xl font-semibold text-white">Configuración</Text>
+        <Text className="flex-1 text-xl font-semibold text-white">Configuración</Text>
+        <MenuRapido />
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-3">
@@ -65,7 +67,15 @@ export default function PantallaConfiguracion() {
           titulo="Anuncios de voz"
           descripcion="Minutos, cuenta regresiva y alertas tácticas por voz."
           valor={vozActiva}
-          onToggle={() => setVozActiva(!vozActiva)}
+          onToggle={() => {
+            const nuevo = !vozActiva;
+            setVozActiva(nuevo);
+            if (nuevo) {
+              desbloquearVoz();
+              // Test inmediato para confirmar que funciona en este navegador
+              setTimeout(() => decir("Voz activada"), 50);
+            }
+          }}
         />
 
         <Text className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

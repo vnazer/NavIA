@@ -5,6 +5,15 @@ import { View, Text, Pressable } from "react-native";
 import { Play, RotateCcw, Square } from "lucide-react-native";
 import { useRaceTimerStore } from "../store/useRaceTimerStore";
 import { useRaceTimer, formatearTiempoTimer } from "../hooks/useRaceTimer";
+import { desbloquearVoz } from "@/lib/voz/servicio";
+
+function iniciarConVoz(
+  iniciar: (segundos: number) => void,
+  segundos: number,
+): void {
+  desbloquearVoz();
+  iniciar(segundos);
+}
 
 const COLOR_POR_FASE: Record<string, string> = {
   off: "#94a3b8",
@@ -58,21 +67,21 @@ export function RaceTimerWidget() {
       {!activo ? (
         <View className="flex-row gap-2">
           <Pressable
-            onPress={() => iniciar(5 * 60)}
+            onPress={() => iniciarConVoz(iniciar, 5 * 60)}
             className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 p-3"
           >
             <Play size={14} color="white" />
             <Text className="text-sm font-semibold text-white">5 min</Text>
           </Pressable>
           <Pressable
-            onPress={() => iniciar(4 * 60)}
+            onPress={() => iniciarConVoz(iniciar, 4 * 60)}
             className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 p-3"
           >
             <Play size={14} color="white" />
             <Text className="text-sm font-semibold text-white">4 min</Text>
           </Pressable>
           <Pressable
-            onPress={() => iniciar(60)}
+            onPress={() => iniciarConVoz(iniciar, 60)}
             className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 p-3"
           >
             <Play size={14} color="white" />

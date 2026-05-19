@@ -26,6 +26,7 @@ import { PanelShifts } from "@/features/regata/components/PanelShifts";
 import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { MapaRegata } from "@/features/boyas/components/MapaRegata";
 import { ListaBoyasNavegacion } from "@/features/boyas/components/ListaBoyasNavegacion";
+import { MenuRapido } from "@/components/MenuRapido";
 
 export default function PantallaRegata() {
   const router = useRouter();
@@ -98,7 +99,8 @@ export default function PantallaRegata() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
         </Pressable>
-        <Text className="text-xl font-semibold text-white">Regata</Text>
+        <Text className="flex-1 text-xl font-semibold text-white">Regata</Text>
+        <MenuRapido />
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-4">

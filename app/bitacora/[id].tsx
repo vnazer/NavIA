@@ -26,6 +26,7 @@ import {
 } from "@/features/bitacora/lib/analitica";
 import { MapaTrack } from "@/features/bitacora/components/MapaTrack";
 import { GraficoSOG } from "@/features/bitacora/components/GraficoSOG";
+import { MenuRapido } from "@/components/MenuRapido";
 
 function confirmar(mensaje: string, onAceptar: () => void) {
   if (Platform.OS === "web") {
@@ -110,6 +111,7 @@ export default function PantallaDetalleSesion() {
           <Pressable onPress={handleEliminar} hitSlop={12}>
             <Trash2 size={20} color="white" />
           </Pressable>
+          <MenuRapido />
         </View>
       </View>
 
