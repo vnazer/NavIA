@@ -32,6 +32,11 @@ jobs:
           CI: "true"
           # Asegura que Metro no busque flow types ni intente abrir el watcher
           EXPO_NO_TYPESCRIPT_SETUP: "1"
+          # API key de aisstream.io. Se inlinea en el bundle al buildear
+          # (las vars EXPO_PUBLIC_* se exponen al cliente, así que esta key
+          # es visible públicamente — para uso personal está bien).
+          # Configurada como secret `API` en GitHub Actions.
+          EXPO_PUBLIC_AISSTREAM_API_KEY: ${{ secrets.API }}
 
       - name: Add Apache fallback for client-side routing
         run: |
