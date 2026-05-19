@@ -27,18 +27,22 @@ import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { MapaRegata } from "@/features/boyas/components/MapaRegata";
 import { ListaBoyasNavegacion } from "@/features/boyas/components/ListaBoyasNavegacion";
 import { MenuRapido } from "@/components/MenuRapido";
+import { useColorPorTema } from "@/lib/tema/colores";
 
 export default function PantallaRegata() {
   const router = useRouter();
   const barco = useBarcoStore((s) => s.getBarcoActual());
+  const colorIconoClaro = useColorPorTema("#334155", "#e2e8f0");
 
   const spotId = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
+  const customSpots = useSpotStore((s) => s.customSpots);
   const spot = useMemo(() => {
-    const base = SPOTS.find((s) => s.id === spotId) ?? SPOTS[0];
+    const todos = [...SPOTS, ...customSpots];
+    const base = todos.find((s) => s.id === spotId) ?? SPOTS[0];
     const ov = overrides[base.id];
     return ov ? { ...base, lat: ov.lat, lon: ov.lon } : base;
-  }, [spotId, overrides]);
+  }, [spotId, overrides, customSpots]);
 
   const { pronostico } = usePronosticoViento();
   // pronostico también se pasa a PanelShifts para histórico de shifts
@@ -94,7 +98,7 @@ export default function PantallaRegata() {
     : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
       <View className="flex-row items-center gap-3 bg-mar-700 p-4">
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
@@ -105,13 +109,13 @@ export default function PantallaRegata() {
 
       <ScrollView contentContainerClassName="p-4 gap-4">
         {/* Estado */}
-        <View className="rounded-xl bg-white p-4 shadow-sm">
-          <Text className="text-xs uppercase text-slate-500">Spot · Barco</Text>
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+        <View className="rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
+          <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Spot · Barco</Text>
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {spot.nombre} · {barco.nombre}
           </Text>
           {vientoActual && (
-            <Text className="mt-1 text-xs text-mar-700">
+            <Text className="mt-1 text-xs text-mar-700 dark:text-mar-100">
               Viento: {Math.round(vientoActual.velocidadNudos)} kt desde{" "}
               {Math.round(vientoActual.direccionGrados)}°
             </Text>
@@ -119,18 +123,18 @@ export default function PantallaRegata() {
         </View>
 
         {/* Boyas del cuadro de regata */}
-        <View className="gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <View className="gap-3 rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-sm">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <MapPin size={16} color="#ea580c" />
-              <Text className="text-sm font-semibold uppercase text-slate-700">
+              <Text className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200">
                 Boyas ({boyasActivas.length})
               </Text>
             </View>
             <Link href="/boyas" asChild>
-              <Pressable className="flex-row items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5">
-                <Edit3 size={12} color="#334155" />
-                <Text className="text-xs font-semibold text-slate-700">
+              <Pressable className="flex-row items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5">
+                <Edit3 size={12} color={colorIconoClaro} />
+                <Text className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                   Editar
                 </Text>
               </Pressable>
@@ -149,14 +153,14 @@ export default function PantallaRegata() {
                 posBarco={posBarco}
               />
               {sesion && (
-                <Text className="text-xs text-slate-500">
+                <Text className="text-xs text-slate-500 dark:text-slate-400">
                   Editando snapshot de la sesión activa — no afecta las
                   predeterminadas del spot.
                 </Text>
               )}
             </>
           ) : (
-            <Text className="text-sm text-slate-500">
+            <Text className="text-sm text-slate-500 dark:text-slate-400">
               No hay boyas cargadas. Tap &quot;Editar&quot; para pegar las
               coordenadas que envió el juez.
             </Text>
@@ -198,15 +202,15 @@ export default function PantallaRegata() {
 
         {/* Estado del GPS */}
         {trackingActivo && (
-          <View className="rounded-xl bg-white p-4 shadow-sm">
+          <View className="rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
             <View className="flex-row items-center gap-2">
               <Navigation size={16} color="#0a4d7a" />
-              <Text className="text-sm font-semibold text-slate-700">
+              <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Tracking GPS
               </Text>
             </View>
             {permiso === "pendiente" && (
-              <Text className="mt-2 text-sm text-slate-500">
+              <Text className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 Solicitando permiso de ubicación…
               </Text>
             )}
@@ -215,28 +219,28 @@ export default function PantallaRegata() {
             )}
             {ultimoPunto && (
               <View className="mt-3 flex-row gap-2">
-                <View className="flex-1 rounded-lg bg-mar-50 p-3">
-                  <Text className="text-xs uppercase text-mar-700">SOG</Text>
-                  <Text className="mt-1 text-2xl font-bold text-slate-900">
+                <View className="flex-1 rounded-lg bg-mar-50 dark:bg-mar-900 p-3">
+                  <Text className="text-xs uppercase text-mar-700 dark:text-mar-100">SOG</Text>
+                  <Text className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                     {ultimoPunto.sogKts.toFixed(1)}
                   </Text>
-                  <Text className="text-xs text-slate-600">nudos</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-300">nudos</Text>
                 </View>
-                <View className="flex-1 rounded-lg bg-mar-50 p-3">
-                  <Text className="text-xs uppercase text-mar-700">COG</Text>
-                  <Text className="mt-1 text-2xl font-bold text-slate-900">
+                <View className="flex-1 rounded-lg bg-mar-50 dark:bg-mar-900 p-3">
+                  <Text className="text-xs uppercase text-mar-700 dark:text-mar-100">COG</Text>
+                  <Text className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                     {Math.round(ultimoPunto.cogGrados)}°
                   </Text>
-                  <Text className="text-xs text-slate-600">rumbo</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-300">rumbo</Text>
                 </View>
-                <View className="flex-1 rounded-lg bg-slate-100 p-3">
-                  <Text className="text-xs uppercase text-slate-700">±</Text>
-                  <Text className="mt-1 text-2xl font-bold text-slate-900">
+                <View className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-3">
+                  <Text className="text-xs uppercase text-slate-700 dark:text-slate-200">±</Text>
+                  <Text className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                     {ultimoPunto.precisionMetros != null
                       ? Math.round(ultimoPunto.precisionMetros)
                       : "—"}
                   </Text>
-                  <Text className="text-xs text-slate-600">m</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-300">m</Text>
                 </View>
               </View>
             )}
@@ -262,12 +266,12 @@ export default function PantallaRegata() {
 
         {/* Resumen de la sesión activa */}
         {sesion && (
-          <View className="rounded-xl bg-white p-4 shadow-sm">
-            <Text className="text-xs uppercase text-slate-500">Sesión</Text>
-            <Text className="mt-1 text-sm font-semibold text-slate-900">
+          <View className="rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Sesión</Text>
+            <Text className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
               {sesion.nombre}
             </Text>
-            <Text className="mt-1 text-xs text-slate-600">
+            <Text className="mt-1 text-xs text-slate-600 dark:text-slate-300">
               {sesion.puntos.length} puntos GPS registrados ·{" "}
               {duracionMinutos(sesion.fechaInicio)} min
             </Text>
@@ -275,7 +279,7 @@ export default function PantallaRegata() {
         )}
 
         {!trackingActivo && (
-          <Text className="px-4 text-center text-xs text-slate-500">
+          <Text className="px-4 text-center text-xs text-slate-500 dark:text-slate-400">
             Iniciá una regata para registrar tu tracking GPS y comparar tu
             performance contra el polar del barco en tiempo real.
           </Text>

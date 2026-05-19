@@ -17,6 +17,7 @@ import { exportarGpx } from "@/lib/gpx/exportar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useRegataStore } from "@/features/regata/store/useRegataStore";
+import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { SPOTS } from "@/features/spots/data/spots";
 import { BARCOS } from "@/features/polar/data/barcos";
 import {
@@ -45,8 +46,13 @@ export default function PantallaDetalleSesion() {
   const getSesion = useRegataStore((s) => s.getSesion);
   const eliminarSesion = useRegataStore((s) => s.eliminarSesion);
 
+  const customSpots = useSpotStore((s) => s.customSpots);
   const sesion = getSesion(id);
-  const spot = sesion ? SPOTS.find((s) => s.id === sesion.spotId) : null;
+  const spot = sesion
+    ? (SPOTS.find((s) => s.id === sesion.spotId) ??
+      customSpots.find((s) => s.id === sesion.spotId) ??
+      null)
+    : null;
   const barco = sesion ? BARCOS.find((b) => b.id === sesion.barcoId) : null;
 
   const puntosAnalizados = useMemo(() => {
@@ -61,7 +67,7 @@ export default function PantallaDetalleSesion() {
 
   if (!sesion || !barco || !metricas) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
         <View className="flex-row items-center gap-3 bg-mar-700 p-4">
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <ChevronLeft size={24} color="white" />
@@ -69,7 +75,7 @@ export default function PantallaDetalleSesion() {
           <Text className="text-xl font-semibold text-white">Sesión</Text>
         </View>
         <View className="p-6">
-          <Text className="text-base text-slate-700">
+          <Text className="text-base text-slate-700 dark:text-slate-200">
             No se encontró la sesión solicitada.
           </Text>
         </View>
@@ -101,7 +107,7 @@ export default function PantallaDetalleSesion() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
       <View className="flex-row items-center justify-between gap-3 bg-mar-700 p-4">
         <View className="flex-1 flex-row items-center gap-3">
           <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -128,27 +134,27 @@ export default function PantallaDetalleSesion() {
       <ScrollView contentContainerClassName="p-4 gap-4">
         {/* Métricas top */}
         <View className="flex-row flex-wrap gap-2">
-          <View className="min-w-[140px] flex-1 rounded-xl bg-white p-3">
-            <Text className="text-xs uppercase text-slate-500">Duración</Text>
-            <Text className="mt-1 text-xl font-bold text-slate-900">
+          <View className="min-w-[140px] flex-1 rounded-xl bg-white dark:bg-slate-800 p-3">
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Duración</Text>
+            <Text className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
               {formatearDuracion(metricas.duracionMs)}
             </Text>
           </View>
-          <View className="min-w-[140px] flex-1 rounded-xl bg-white p-3">
-            <Text className="text-xs uppercase text-slate-500">Distancia</Text>
-            <Text className="mt-1 text-xl font-bold text-slate-900">
+          <View className="min-w-[140px] flex-1 rounded-xl bg-white dark:bg-slate-800 p-3">
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Distancia</Text>
+            <Text className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
               {metricas.distanciaMn.toFixed(2)} MN
             </Text>
           </View>
-          <View className="min-w-[140px] flex-1 rounded-xl bg-white p-3">
-            <Text className="text-xs uppercase text-slate-500">SOG prom</Text>
-            <Text className="mt-1 text-xl font-bold text-slate-900">
+          <View className="min-w-[140px] flex-1 rounded-xl bg-white dark:bg-slate-800 p-3">
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">SOG prom</Text>
+            <Text className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
               {metricas.sogPromedio.toFixed(1)} kt
             </Text>
           </View>
-          <View className="min-w-[140px] flex-1 rounded-xl bg-white p-3">
-            <Text className="text-xs uppercase text-slate-500">SOG máx</Text>
-            <Text className="mt-1 text-xl font-bold text-slate-900">
+          <View className="min-w-[140px] flex-1 rounded-xl bg-white dark:bg-slate-800 p-3">
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">SOG máx</Text>
+            <Text className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
               {metricas.sogMax.toFixed(1)} kt
             </Text>
           </View>
@@ -171,8 +177,8 @@ export default function PantallaDetalleSesion() {
         </View>
 
         {/* Distribución de tiempo */}
-        <View className="gap-2 rounded-2xl bg-white p-4">
-          <Text className="text-sm font-semibold uppercase text-slate-700">
+        <View className="gap-2 rounded-2xl bg-white dark:bg-slate-800 p-4">
+          <Text className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200">
             Distribución de performance
           </Text>
           <View className="mt-2 h-3 flex-row overflow-hidden rounded-full">
@@ -204,40 +210,40 @@ export default function PantallaDetalleSesion() {
 
         {/* Ángulos promedio */}
         <View className="flex-row gap-2">
-          <View className="flex-1 rounded-xl bg-mar-50 p-3">
-            <Text className="text-xs font-semibold uppercase text-mar-700">
+          <View className="flex-1 rounded-xl bg-mar-50 dark:bg-mar-900 p-3">
+            <Text className="text-xs font-semibold uppercase text-mar-700 dark:text-mar-100">
               Ceñida (real)
             </Text>
             {metricas.twaPromedioCenida !== null ? (
               <>
-                <Text className="mt-1 text-xl font-bold text-slate-900">
+                <Text className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
                   {Math.round(metricas.twaPromedioCenida)}°
                 </Text>
-                <Text className="text-xs text-slate-600">
+                <Text className="text-xs text-slate-600 dark:text-slate-300">
                   {metricas.sogPromedioCenida?.toFixed(1)} kt prom
                 </Text>
               </>
             ) : (
-              <Text className="mt-1 text-sm text-slate-500">
+              <Text className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Sin tiempo upwind
               </Text>
             )}
           </View>
-          <View className="flex-1 rounded-xl bg-slate-100 p-3">
-            <Text className="text-xs font-semibold uppercase text-slate-700">
+          <View className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-3">
+            <Text className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-200">
               Empopada (real)
             </Text>
             {metricas.twaPromedioEmpopada !== null ? (
               <>
-                <Text className="mt-1 text-xl font-bold text-slate-900">
+                <Text className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
                   {Math.round(metricas.twaPromedioEmpopada)}°
                 </Text>
-                <Text className="text-xs text-slate-600">
+                <Text className="text-xs text-slate-600 dark:text-slate-300">
                   {metricas.sogPromedioEmpopada?.toFixed(1)} kt prom
                 </Text>
               </>
             ) : (
-              <Text className="mt-1 text-sm text-slate-500">
+              <Text className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Sin tiempo downwind
               </Text>
             )}
@@ -245,16 +251,16 @@ export default function PantallaDetalleSesion() {
         </View>
 
         {/* Mapa del track */}
-        <View className="gap-2 rounded-2xl bg-white p-4">
-          <Text className="text-sm font-semibold uppercase text-slate-700">
+        <View className="gap-2 rounded-2xl bg-white dark:bg-slate-800 p-4">
+          <Text className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200">
             Track recorrido
           </Text>
           <MapaTrack puntos={puntosAnalizados} />
         </View>
 
         {/* Gráfico SOG vs tiempo */}
-        <View className="gap-2 rounded-2xl bg-white p-4">
-          <Text className="text-sm font-semibold uppercase text-slate-700">
+        <View className="gap-2 rounded-2xl bg-white dark:bg-slate-800 p-4">
+          <Text className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200">
             SOG real vs BSP teórico
           </Text>
           <GraficoSOG puntos={puntosAnalizados} />
@@ -262,18 +268,18 @@ export default function PantallaDetalleSesion() {
 
         {/* Viento snapshot */}
         {sesion.vientoSnapshot && (
-          <View className="rounded-xl bg-slate-100 p-3">
-            <Text className="text-xs font-semibold uppercase text-slate-600">
+          <View className="rounded-xl bg-slate-100 dark:bg-slate-800 p-3">
+            <Text className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
               Viento de referencia (inicio sesión)
             </Text>
-            <Text className="mt-1 text-sm text-slate-800">
+            <Text className="mt-1 text-sm text-slate-800 dark:text-slate-100">
               {Math.round(sesion.vientoSnapshot.velocidadNudos)} kt ·{" "}
               {Math.round(sesion.vientoSnapshot.direccionGrados)}°
             </Text>
           </View>
         )}
 
-        <Text className="px-4 text-center text-xs text-slate-500">
+        <Text className="px-4 text-center text-xs text-slate-500 dark:text-slate-400">
           Análisis basado en polar de referencia. Valores reales pueden variar
           por mar, calibración del barco y tripulación.
         </Text>

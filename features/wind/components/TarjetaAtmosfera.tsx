@@ -49,33 +49,33 @@ export function TarjetaAtmosfera({ punto, proximas3hr }: Props) {
     presion != null && presionFutura != null ? presion - presionFutura : 0;
 
   return (
-    <View className="gap-3 rounded-2xl bg-white p-4 shadow-sm">
-      <Text className="text-sm font-semibold uppercase text-slate-700">
+    <View className="gap-3 rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-sm">
+      <Text className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200">
         Atmósfera
       </Text>
 
       <View className="flex-row flex-wrap gap-2">
         {/* Presión */}
-        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 p-3">
+        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
           <View className="mb-1 flex-row items-center gap-1">
             <Gauge size={14} color="#64748b" />
-            <Text className="text-xs uppercase text-slate-500">Presión</Text>
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Presión</Text>
           </View>
-          <Text className="text-2xl font-bold text-slate-900">
+          <Text className="text-2xl font-bold text-slate-900 dark:text-white">
             {presion != null ? presion.toFixed(0) : "—"}
           </Text>
-          <Text className="text-xs text-slate-500">
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             hPa{tendencia ? ` · ${tendencia}` : ""}
           </Text>
         </View>
 
         {/* UV */}
-        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 p-3">
+        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
           <View className="mb-1 flex-row items-center gap-1">
             <Sun size={14} color="#64748b" />
-            <Text className="text-xs uppercase text-slate-500">UV</Text>
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">UV</Text>
           </View>
-          <Text className="text-2xl font-bold text-slate-900">
+          <Text className="text-2xl font-bold text-slate-900 dark:text-white">
             {uv != null ? uv.toFixed(1) : "—"}
           </Text>
           <Text
@@ -87,42 +87,42 @@ export function TarjetaAtmosfera({ punto, proximas3hr }: Props) {
         </View>
 
         {/* Visibilidad */}
-        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 p-3">
+        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
           <View className="mb-1 flex-row items-center gap-1">
             <Eye size={14} color="#64748b" />
-            <Text className="text-xs uppercase text-slate-500">
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">
               Visibilidad
             </Text>
           </View>
-          <Text className="text-2xl font-bold text-slate-900">
+          <Text className="text-2xl font-bold text-slate-900 dark:text-white">
             {visKm != null ? visKm.toFixed(0) : "—"}
           </Text>
-          <Text className="text-xs text-slate-500">km</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">km</Text>
         </View>
 
         {/* Lluvia 3hr */}
-        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 p-3">
+        <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
           <View className="mb-1 flex-row items-center gap-1">
             <CloudRain size={14} color="#64748b" />
-            <Text className="text-xs uppercase text-slate-500">Lluvia 3hr</Text>
+            <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Lluvia 3hr</Text>
           </View>
-          <Text className="text-2xl font-bold text-slate-900">
+          <Text className="text-2xl font-bold text-slate-900 dark:text-white">
             {probLluviaMax.toFixed(0)}%
           </Text>
-          <Text className="text-xs text-slate-500">prob. máx.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">prob. máx.</Text>
         </View>
 
         {/* Ola (solo si marine API devolvió algo) */}
         {olaMt != null && (
-          <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 p-3">
+          <View className="min-w-[140px] flex-1 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
             <View className="mb-1 flex-row items-center gap-1">
               <Waves size={14} color="#64748b" />
-              <Text className="text-xs uppercase text-slate-500">Ola sig.</Text>
+              <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Ola sig.</Text>
             </View>
-            <Text className="text-2xl font-bold text-slate-900">
+            <Text className="text-2xl font-bold text-slate-900 dark:text-white">
               {olaMt.toFixed(1)}
             </Text>
-            <Text className="text-xs text-slate-500">metros</Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-400">metros</Text>
           </View>
         )}
       </View>

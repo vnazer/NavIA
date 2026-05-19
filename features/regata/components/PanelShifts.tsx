@@ -72,18 +72,18 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
   }, [shiftActualInfo]);
 
   return (
-    <View className="rounded-xl bg-white p-4 shadow-sm">
+    <View className="rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
       {/* Header */}
       <View className="mb-3 flex-row items-center gap-2">
-        <Text className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        <Text className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Shifts de Viento
         </Text>
       </View>
 
       {/* Shift actual vs baseline */}
       {shiftActualInfo ? (
-        <View className="mb-3 rounded-lg bg-slate-50 p-3">
-          <Text className="mb-1 text-xs uppercase text-slate-500">
+        <View className="mb-3 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
+          <Text className="mb-1 text-xs uppercase text-slate-500 dark:text-slate-400">
             Cambio desde inicio de sesión
           </Text>
           <View className="flex-row items-center gap-2">
@@ -103,21 +103,21 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
             </Text>
           </View>
           {tacticaFavorecida && (
-            <Text className="mt-1 text-xs text-slate-600">
+            <Text className="mt-1 text-xs text-slate-600 dark:text-slate-300">
               Favorece{" "}
-              <Text className="font-semibold text-mar-700">
+              <Text className="font-semibold text-mar-700 dark:text-mar-100">
                 {tacticaFavorecida}
               </Text>
             </Text>
           )}
           {baseline != null && twdActual != null && (
-            <Text className="mt-1 text-xs text-slate-400">
+            <Text className="mt-1 text-xs text-slate-400 dark:text-slate-500">
               Base {Math.round(baseline)}° → Ahora {Math.round(twdActual)}°
             </Text>
           )}
         </View>
       ) : (
-        <Text className="mb-3 text-xs text-slate-400">
+        <Text className="mb-3 text-xs text-slate-400 dark:text-slate-500">
           Iniciá una sesión para ver el shift vs baseline.
         </Text>
       )}
@@ -125,7 +125,7 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
       {/* Historia de shifts */}
       {shifts.length > 0 && (
         <>
-          <Text className="mb-2 text-xs font-semibold uppercase text-slate-500">
+          <Text className="mb-2 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
             Historia pronóstico
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -133,7 +133,7 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
               {shifts.map((s, i) => (
                 <View
                   key={i}
-                  className="items-center rounded-lg bg-slate-50 px-3 py-2"
+                  className="items-center rounded-lg bg-slate-50 dark:bg-slate-900 px-3 py-2"
                 >
                   <IconoTendencia t={s.tendencia} size={12} />
                   <Text
@@ -143,7 +143,7 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
                     {s.deltaGrados > 0 ? "+" : ""}
                     {Math.round(s.deltaGrados)}°
                   </Text>
-                  <Text className="text-xs text-slate-400">
+                  <Text className="text-xs text-slate-400 dark:text-slate-500">
                     {new Date(s.ts).toLocaleTimeString("es-CL", {
                       hour: "2-digit",
                       minute: "2-digit",

@@ -13,7 +13,7 @@ export default function PantallaBitacora() {
   const sesiones = useRegataStore((s) => s.sesionesHistoricas);
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
       <View className="flex-row items-center gap-3 bg-mar-700 p-4">
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
@@ -24,12 +24,12 @@ export default function PantallaBitacora() {
 
       <ScrollView contentContainerClassName="p-4 gap-3">
         {sesiones.length === 0 && (
-          <View className="items-center gap-3 rounded-2xl bg-white p-8">
+          <View className="items-center gap-3 rounded-2xl bg-white dark:bg-slate-800 p-8">
             <BookOpen size={36} color="#94a3b8" />
-            <Text className="text-base font-semibold text-slate-800">
+            <Text className="text-base font-semibold text-slate-800 dark:text-slate-100">
               Aún no hay sesiones grabadas
             </Text>
-            <Text className="text-center text-sm text-slate-500">
+            <Text className="text-center text-sm text-slate-500 dark:text-slate-400">
               Iniciá una regata desde la pantalla principal para empezar a
               registrar tus salidas.
             </Text>
@@ -46,7 +46,7 @@ export default function PantallaBitacora() {
         ))}
 
         {sesiones.length > 0 && (
-          <Text className="mt-2 text-center text-xs text-slate-400">
+          <Text className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
             {sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""}{" "}
             registrada{sesiones.length !== 1 ? "s" : ""}
           </Text>

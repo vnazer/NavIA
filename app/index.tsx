@@ -17,6 +17,7 @@ import { MapPin, RefreshCw, Map, Play, BookOpen, Settings } from "lucide-react-n
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { useColorPorTema } from "@/lib/tema/colores";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
 import { TarjetaAtmosfera } from "@/features/wind/components/TarjetaAtmosfera";
@@ -24,16 +25,19 @@ import { ListaPronostico } from "@/features/wind/components/ListaPronostico";
 import { CardPerformance } from "@/features/polar/components/CardPerformance";
 
 export default function PantallaPrincipal() {
+  const colorSettings = useColorPorTema("#334155", "#e2e8f0");
   // Derivar el spot actual desde primitivos del store para evitar loops
   // de re-render (un selector que devuelve {...spread} causa Maximum
   // update depth exceeded porque Zustand compara por Object.is).
   const spotId = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
+  const customSpots = useSpotStore((s) => s.customSpots);
   const spot = useMemo(() => {
-    const base = SPOTS.find((s) => s.id === spotId) ?? SPOTS[0];
+    const todos = [...SPOTS, ...customSpots];
+    const base = todos.find((s) => s.id === spotId) ?? SPOTS[0];
     const ov = overrides[base.id];
     return ov ? { ...base, lat: ov.lat, lon: ov.lon } : base;
-  }, [spotId, overrides]);
+  }, [spotId, overrides, customSpots]);
 
   const { pronostico, cargando, error, recargar } = usePronosticoViento();
 
@@ -86,20 +90,20 @@ export default function PantallaPrincipal() {
       : "AHORA";
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={["bottom"]}>
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900" edges={["bottom"]}>
       <ScrollView contentContainerClassName="p-4 gap-4">
         {/* Header con spot actual + botón mapa */}
         <View className="gap-2">
           <Link href="/spots" asChild>
-            <Pressable className="flex-row items-center justify-between rounded-xl bg-white p-4 shadow-sm">
+            <Pressable className="flex-row items-center justify-between rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
               <View className="flex-row items-center gap-3">
                 <MapPin size={20} color="#0a4d7a" />
                 <View>
-                  <Text className="text-lg font-semibold text-slate-900">
+                  <Text className="text-lg font-semibold text-slate-900 dark:text-white">
                     {spot.nombre}
                   </Text>
                   {spot.club && (
-                    <Text className="text-xs text-slate-500">{spot.club}</Text>
+                    <Text className="text-xs text-slate-500 dark:text-slate-400">{spot.club}</Text>
                   )}
                 </View>
               </View>
@@ -131,8 +135,8 @@ export default function PantallaPrincipal() {
               </Pressable>
             </Link>
             <Link href="/configuracion" asChild>
-              <Pressable className="flex-row items-center justify-center rounded-xl bg-slate-200 p-3">
-                <Settings size={16} color="#334155" />
+              <Pressable className="flex-row items-center justify-center rounded-xl bg-slate-200 p-3 dark:bg-slate-700">
+                <Settings size={16} color={colorSettings} />
               </Pressable>
             </Link>
           </View>
@@ -158,7 +162,7 @@ export default function PantallaPrincipal() {
         {cargando && !pronostico && (
           <View className="items-center p-8">
             <ActivityIndicator size="large" color="#0a4d7a" />
-            <Text className="mt-2 text-sm text-slate-500">
+            <Text className="mt-2 text-sm text-slate-500 dark:text-slate-400">
               Cargando pronóstico…
             </Text>
           </View>
@@ -192,7 +196,7 @@ export default function PantallaPrincipal() {
             onPress={() => setIndiceSeleccionado(indiceAhora)}
             className="self-center rounded-full bg-slate-200 px-4 py-2"
           >
-            <Text className="text-sm font-semibold text-slate-700">
+            <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               ← Volver a AHORA
             </Text>
           </Pressable>
@@ -209,7 +213,7 @@ export default function PantallaPrincipal() {
 
         {/* Footer */}
         {pronostico && (
-          <Text className="mt-2 text-center text-xs text-slate-400">
+          <Text className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
             Actualizado:{" "}
             {new Date(pronostico.generadoEn).toLocaleString("es-CL")}
           </Text>

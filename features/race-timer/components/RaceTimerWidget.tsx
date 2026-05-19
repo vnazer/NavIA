@@ -33,9 +33,9 @@ export function RaceTimerWidget() {
   const color = COLOR_POR_FASE[fase] ?? "#94a3b8";
 
   return (
-    <View className="gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <View className="gap-3 rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-sm">
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-semibold uppercase text-slate-700">
+        <Text className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200">
           Race Timer
         </Text>
         {activo && (

@@ -77,7 +77,7 @@ export function MenuRapido({ color = "white" }: Props) {
           onPress={() => setAbierto(false)}
         >
           <Pressable
-            className="ml-auto h-full w-72 bg-white p-4 dark:bg-slate-900"
+            className="ml-auto h-full w-72 bg-white p-4 dark:bg-slate-800"
             onPress={(e) => e.stopPropagation()}
           >
             <View className="mb-4 flex-row items-center justify-between">
