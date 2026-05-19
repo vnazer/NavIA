@@ -28,12 +28,13 @@ export const TILES = {
       '&copy; <a href="https://openseamap.org">OpenSeaMap</a>',
     minZoom: 12,
   },
-  /** Capa de batimetría (profundidades) de OpenSeaMap basada en GEBCO.
-   *  Cobertura global, resolución ~15 arcsec. Si el endpoint no responde,
-   *  alternativas: EMODNet WMS (Europa) o servir GEBCO local con gdal2tiles. */
+  /** Overlay de batimetría: Esri World Ocean Reference.
+   *  Cobertura global con contornos de profundidad y toponimia submarina.
+   *  Overlay transparente — va encima de OSM sin tapar el mapa base.
+   *  Nota: Esri usa orden {z}/{y}/{x} en la ruta (no {x}/{y}). */
   bathymetry: {
-    url: "https://tiles.openseamap.org/depth/{z}/{x}/{y}.png",
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}",
     atribucion:
-      '&copy; <a href="https://openseamap.org">OpenSeaMap</a> Bathymetry (GEBCO)',
+      '&copy; <a href="https://www.esri.com">Esri</a> World Ocean Reference',
   },
 };
