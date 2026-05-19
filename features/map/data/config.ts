@@ -20,12 +20,20 @@ export const TILES = {
       '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
   },
   /** Overlay náutico de OpenSeaMap (boyas, marcas, profundidades).
-   *  El servidor solo renderiza seamarks a partir de zoom 10; por debajo
+   *  El servidor solo renderiza seamarks a partir de zoom 12; por debajo
    *  devuelve un PNG placeholder "Zoom Level Not Supported". */
   seamark: {
     url: "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
     atribucion:
       '&copy; <a href="https://openseamap.org">OpenSeaMap</a>',
-    minZoom: 10,
+    minZoom: 12,
+  },
+  /** Capa de batimetría (profundidades) de OpenSeaMap basada en GEBCO.
+   *  Cobertura global, resolución ~15 arcsec. Si el endpoint no responde,
+   *  alternativas: EMODNet WMS (Europa) o servir GEBCO local con gdal2tiles. */
+  bathymetry: {
+    url: "https://tiles.openseamap.org/depth/{z}/{x}/{y}.png",
+    atribucion:
+      '&copy; <a href="https://openseamap.org">OpenSeaMap</a> Bathymetry (GEBCO)',
   },
 };

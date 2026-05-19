@@ -32,6 +32,11 @@ jobs:
           CI: "true"
           # Asegura que Metro no busque flow types ni intente abrir el watcher
           EXPO_NO_TYPESCRIPT_SETUP: "1"
+          # API key de aisstream.io. Se inlinea en el bundle al buildear
+          # (las vars EXPO_PUBLIC_* se exponen al cliente, así que esta key
+          # es visible públicamente — para uso personal está bien).
+          # Configurada como secret `API` en GitHub Actions.
+          EXPO_PUBLIC_AISSTREAM_API_KEY: ${{ secrets.API }}
 
       - name: Add Apache fallback for client-side routing
         run: |
@@ -74,6 +79,21 @@ jobs:
             ExpiresByType application/javascript "access plus 1 year"
             ExpiresByType image/png "access plus 1 month"
             ExpiresByType image/jpeg "access plus 1 month"
+          </IfModule>
+
+          # Headers explícitos de Cache-Control (más universal que mod_expires).
+          # HTML nunca se cachea — siempre se chequea contra el server para que
+          # un deploy nuevo se vea de inmediato. Los JS/CSS de Expo tienen hash
+          # en el nombre, así que son immutables y se cachean por 1 año.
+          <IfModule mod_headers.c>
+            <FilesMatch "\.html$">
+              Header set Cache-Control "no-cache, no-store, must-revalidate"
+              Header set Pragma "no-cache"
+              Header set Expires "0"
+            </FilesMatch>
+            <FilesMatch "_expo/static/.*\.(js|css|png|jpg|jpeg|svg|woff2?)$">
+              Header set Cache-Control "public, max-age=31536000, immutable"
+            </FilesMatch>
           </IfModule>
           EOF
 

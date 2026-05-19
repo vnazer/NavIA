@@ -15,7 +15,7 @@ export function ToggleLluvia({ activo, onToggle }: Props) {
       title={activo ? "Ocultar lluvia" : "Mostrar lluvia"}
       style={{
         position: "absolute",
-        top: 116, // debajo de ControlCapaViento y ControlModoEdicion
+        top: 160, // debajo de Viento (16), Flechas (64), Editar (112)
         right: 16,
         zIndex: 1000,
         backgroundColor: activo ? "#0a4d7a" : "rgba(255,255,255,0.95)",

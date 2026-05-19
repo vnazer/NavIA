@@ -19,7 +19,7 @@ export function ControlModoEdicion({ activo, onToggle }: Props) {
       }
       style={{
         position: "absolute",
-        top: 64, // Debajo del botón Viento (top: 16, alto ~38, gap 10)
+        top: 112, // Debajo de Viento (16) y Flechas (64)
         right: 16,
         zIndex: 1000,
         backgroundColor: activo ? "#dc2626" : "rgba(255, 255, 255, 0.95)",

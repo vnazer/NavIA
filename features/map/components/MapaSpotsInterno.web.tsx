@@ -41,6 +41,12 @@ import { useRainviewerFrames } from "../hooks/useRainviewerFrames";
 import { CapaLluviaTiles } from "./CapaLluviaTiles.web";
 import { IndicadorLluvia } from "./IndicadorLluvia";
 import { ToggleLluvia } from "./ToggleLluvia";
+import { CapaViento } from "./CapaViento.web";
+import { ControlViento } from "./ControlViento.web";
+import { CapaProfundidad } from "./CapaProfundidad.web";
+import { ControlProfundidad } from "./ControlProfundidad.web";
+import { CapaAis } from "@/features/ais/components/CapaAis.web";
+import { ControlAis } from "@/features/ais/components/ControlAis.web";
 import { calcularLaylines } from "@/features/regata/lib/laylines";
 import { ControlLaylines } from "@/features/regata/components/ControlLaylines.web";
 
@@ -147,6 +153,11 @@ export default function MapaSpotsInterno() {
   const [coordsPendientes, setCoordsPendientes] =
     useState<CoordsPendientes>(null);
   const [lluviaVisible, setLluviaVisible] = useState(false);
+  const [vientoStreamVisible, setVientoStreamVisible] = useState(false);
+  const [horasVientoStream, setHorasVientoStream] = useState(0);
+  const [profundidadVisible, setProfundidadVisible] = useState(false);
+  const [aisVisible, setAisVisible] = useState(false);
+  const [aisCount, setAisCount] = useState(0);
   const [laylinesVisible, setLaylinesVisible] = useState(false);
 
   // Frames de RainViewer animados (Prompt 9)
@@ -187,13 +198,13 @@ export default function MapaSpotsInterno() {
 
   const esAhora = indiceAhora !== null && indiceHoraSeguro === indiceAhora;
 
-  // Laylines: marca de barlovento (primera boya tipo 'windward') + TWD actual del spot
+  // Laylines: marca de barlovento + TWD actual del spot (Prompt 12)
   const laylines = useMemo(() => {
     if (!laylinesVisible) return null;
-    const marcaBarlvto = boyas.find((b) => b.tipo === "windward");
-    if (!marcaBarlvto || !puntoSpotEnHora) return null;
+    const marcaBarlovento = boyas.find((b) => b.tipo === "windward");
+    if (!marcaBarlovento || !puntoSpotEnHora) return null;
     return calcularLaylines(
-      { lat: marcaBarlvto.lat, lon: marcaBarlvto.lon },
+      { lat: marcaBarlovento.lat, lon: marcaBarlovento.lon },
       puntoSpotEnHora.direccionGrados,
     );
   }, [laylinesVisible, boyas, puntoSpotEnHora]);
@@ -234,6 +245,18 @@ export default function MapaSpotsInterno() {
         {lluviaVisible && lluvia.host && lluvia.frameActual && (
           <CapaLluviaTiles host={lluvia.host} frame={lluvia.frameActual} />
         )}
+
+        {/* Capa viento streamlines estilo Windy (Prompt 10) */}
+        <CapaViento
+          visible={vientoStreamVisible}
+          horasAdelante={horasVientoStream}
+        />
+
+        {/* Capa batimetría (Prompt 11) */}
+        <CapaProfundidad visible={profundidadVisible} />
+
+        {/* Capa AIS (Prompt 11) */}
+        <CapaAis visible={aisVisible} onCountChange={setAisCount} />
 
         {/* OpenSeaMap solo renderiza seamarks a partir de zoom ~10. Pedir
             tiles por debajo de eso devuelve PNGs "Zoom Level Not Supported"
@@ -327,9 +350,27 @@ export default function MapaSpotsInterno() {
         )}
       </MapContainer>
 
+      <ControlViento
+        visible={vientoStreamVisible}
+        horasAdelante={horasVientoStream}
+        onToggleVisible={() => setVientoStreamVisible(!vientoStreamVisible)}
+        onChangeHoras={setHorasVientoStream}
+      />
+
       <ControlCapaViento
         activa={capaVientoVisible}
         onToggle={() => setCapaVientoVisible(!capaVientoVisible)}
+      />
+
+      <ControlProfundidad
+        visible={profundidadVisible}
+        onToggle={() => setProfundidadVisible(!profundidadVisible)}
+      />
+
+      <ControlAis
+        visible={aisVisible}
+        cantidadBarcos={aisCount}
+        onToggle={() => setAisVisible(!aisVisible)}
       />
 
       <ControlModoEdicion
@@ -345,6 +386,7 @@ export default function MapaSpotsInterno() {
       <ControlLaylines
         visible={laylinesVisible}
         onToggle={() => setLaylinesVisible(!laylinesVisible)}
+        top={304}
       />
 
       {/* Indicador con la hora del frame de RainViewer (Prompt 9) */}

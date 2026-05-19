@@ -1,7 +1,7 @@
-// Botón flotante en esquina superior derecha del mapa para encender/apagar
-// la capa de flechas de viento. Útil para ver cartas náuticas sin obstrucción.
+// Botón flotante para encender/apagar la capa de FLECHAS de viento por spot
+// (CapaVientoMapa). Va debajo del toggle de streamlines (CapaViento / Prompt 10).
 
-import { Wind } from "lucide-react-native";
+import { ArrowUpRight } from "lucide-react-native";
 
 type Props = {
   activa: boolean;
@@ -12,10 +12,10 @@ export function ControlCapaViento({ activa, onToggle }: Props) {
   return (
     <button
       onClick={onToggle}
-      title={activa ? "Apagar capa de viento" : "Encender capa de viento"}
+      title={activa ? "Apagar flechas de viento" : "Encender flechas de viento"}
       style={{
         position: "absolute",
-        top: 16,
+        top: 64,
         right: 16,
         zIndex: 1000,
         backgroundColor: activa ? "#0a4d7a" : "rgba(255, 255, 255, 0.95)",
@@ -32,8 +32,8 @@ export function ControlCapaViento({ activa, onToggle }: Props) {
         boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
       }}
     >
-      <Wind size={16} color={activa ? "white" : "#334155"} />
-      <span>Viento</span>
+      <ArrowUpRight size={16} color={activa ? "white" : "#334155"} />
+      <span>Flechas</span>
     </button>
   );
 }
