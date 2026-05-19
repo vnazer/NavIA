@@ -13,6 +13,7 @@ import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
 import { VisualizadorPolar } from "@/features/polar/components/VisualizadorPolar";
 import { SelectorBarco } from "@/features/polar/components/SelectorBarco";
 import { calcularOptimos } from "@/features/polar/lib/calculos";
+import { MenuRapido } from "@/components/MenuRapido";
 
 export default function PantallaPolar() {
   const router = useRouter();
@@ -51,9 +52,10 @@ export default function PantallaPolar() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
         </Pressable>
-        <Text className="text-xl font-semibold text-white">
+        <Text className="flex-1 text-xl font-semibold text-white">
           Diagrama polar
         </Text>
+        <MenuRapido />
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-4">

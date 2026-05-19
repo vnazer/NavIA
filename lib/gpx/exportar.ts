@@ -42,8 +42,17 @@ function exportarWeb(gpx: string, nombre: string): void {
   const a = document.createElement("a");
   a.href = url;
   a.download = nombre;
+  a.rel = "noopener";
+  // Safari y algunos navegadores requieren que el anchor esté en el DOM
+  // antes de disparar click() para que respete el atributo download.
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  // Pequeño delay antes de limpiar para que Safari procese la descarga.
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

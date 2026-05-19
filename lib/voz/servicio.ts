@@ -28,6 +28,29 @@ function vozActiva(): boolean {
   return useVozStore.getState().activo;
 }
 
+let webDesbloqueada = false;
+
+/**
+ * Desbloquea el motor de voz en navegadores que requieren user gesture
+ * (Safari, Chrome móvil). Debe llamarse desde un onPress/onClick directo.
+ * Hace un utterance silencioso de 1 caracter; después de esto, subsiguientes
+ * calls funcionan sin gesto del usuario.
+ */
+export function desbloquearVoz(): void {
+  if (Platform.OS !== "web") return;
+  if (webDesbloqueada) return;
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    u.rate = 10;
+    window.speechSynthesis.speak(u);
+    webDesbloqueada = true;
+  } catch {
+    // ignore
+  }
+}
+
 function decirNativo(texto: string): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires

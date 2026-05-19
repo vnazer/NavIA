@@ -7,13 +7,14 @@
 // El otro flujo de agregar boyas es desde el mapa: click derecho / long-press
 // (ver MapaSpotsInterno.web.tsx).
 
-import { useState, Platform } from "react";
+import { useState } from "react";
 import {
   ScrollView,
   View,
   Text,
   Pressable,
   Alert,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,6 +27,7 @@ import {
 } from "lucide-react-native";
 import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { BOYA_META } from "@/features/boyas/types";
+import { MenuRapido } from "@/components/MenuRapido";
 import { ModalPegarCoordenadas } from "@/features/boyas/components/ModalPegarCoordenadas";
 
 function confirmar(mensaje: string, onAceptar: () => void) {
@@ -90,6 +92,7 @@ export default function PantallaBoyas() {
             <Text className="text-xs font-semibold text-white">Limpiar</Text>
           </Pressable>
         )}
+        <MenuRapido />
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-3">

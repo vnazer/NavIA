@@ -18,6 +18,7 @@ import { PanelWaypoint } from "@/features/regata/components/PanelWaypoint";
 import { PanelPrestart } from "@/features/regata/components/PanelPrestart";
 import { SelectorLineaSalida } from "@/features/regata/components/SelectorLineaSalida";
 import { BOYA_META } from "@/features/boyas/types";
+import { MenuRapido } from "@/components/MenuRapido";
 
 export default function PantallaTactica() {
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function PantallaTactica() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
         </Pressable>
-        <View>
+        <View className="flex-1">
           <Text className="text-base font-semibold text-white">Táctica</Text>
           <Text className="text-xs text-white opacity-80">
             {modoActivo === "waypoint"
@@ -71,6 +72,7 @@ export default function PantallaTactica() {
                 : "Selector"}
           </Text>
         </View>
+        <MenuRapido />
       </View>
 
       <ScrollView contentContainerClassName="p-4 gap-3">
