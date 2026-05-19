@@ -41,6 +41,8 @@ import { useRainviewerFrames } from "../hooks/useRainviewerFrames";
 import { CapaLluviaTiles } from "./CapaLluviaTiles.web";
 import { IndicadorLluvia } from "./IndicadorLluvia";
 import { ToggleLluvia } from "./ToggleLluvia";
+import { CapaViento } from "./CapaViento.web";
+import { ControlViento } from "./ControlViento.web";
 
 const LONG_PRESS_MS = 600;
 
@@ -145,6 +147,8 @@ export default function MapaSpotsInterno() {
   const [coordsPendientes, setCoordsPendientes] =
     useState<CoordsPendientes>(null);
   const [lluviaVisible, setLluviaVisible] = useState(false);
+  const [vientoStreamVisible, setVientoStreamVisible] = useState(false);
+  const [horasVientoStream, setHorasVientoStream] = useState(0);
 
   // Frames de RainViewer animados (Prompt 9)
   const lluvia = useRainviewerFrames(lluviaVisible);
@@ -221,6 +225,12 @@ export default function MapaSpotsInterno() {
           <CapaLluviaTiles host={lluvia.host} frame={lluvia.frameActual} />
         )}
 
+        {/* Capa viento streamlines estilo Windy (Prompt 10) */}
+        <CapaViento
+          visible={vientoStreamVisible}
+          horasAdelante={horasVientoStream}
+        />
+
         {/* OpenSeaMap solo renderiza seamarks a partir de zoom ~10. Pedir
             tiles por debajo de eso devuelve PNGs "Zoom Level Not Supported"
             que tapan el mapa. Limitamos con minZoom para evitarlo. */}
@@ -288,6 +298,13 @@ export default function MapaSpotsInterno() {
           />
         )}
       </MapContainer>
+
+      <ControlViento
+        visible={vientoStreamVisible}
+        horasAdelante={horasVientoStream}
+        onToggleVisible={() => setVientoStreamVisible(!vientoStreamVisible)}
+        onChangeHoras={setHorasVientoStream}
+      />
 
       <ControlCapaViento
         activa={capaVientoVisible}
