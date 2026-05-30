@@ -13,6 +13,8 @@ install! 'cocoapods',
 
 prepare_react_native_project!
 
+inhibit_all_warnings!
+
 target 'NavIA' do
   use_expo_modules!
 
@@ -54,10 +56,38 @@ target 'NavIA' do
 
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+
         if target.name == 'fmt'
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
         end
+        # Force Swift 5 to prevent Swift 6 strict concurrency / Sendable errors
+        config.build_settings['SWIFT_VERSION'] = '5.0'
+        config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+        config.build_settings['SWIFT_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+        # Suppress all warnings in pods (nullability, deprecated, etc.)
+        config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+        config.build_settings['CLANG_WARN_NULLABLE_TO_NONNULL_CONVERSION'] = 'NO'
+        config.build_settings['CLANG_ANALYZER_NONNULL'] = 'NO'
+        # Add compiler flags to suppress nullability and all warnings
+        existing = config.build_settings['OTHER_CFLAGS'] || '$(inherited)'
+        unless existing.include?('-Wno-nullability-completeness')
+          config.build_settings['OTHER_CFLAGS'] = "#{existing} -Wno-nullability-completeness -Wno-deprecated-declarations -w"
+        end
       end
+    end
+
+    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.user_project.build_configurations.each do |config|
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+      end
+
+      aggregate_target.user_project.native_targets.each do |target|
+        target.build_configurations.each do |config|
+          config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        end
+      end
+      aggregate_target.user_project.save
     end
 
     # This is necessary for Xcode 14, because it signs resource bundles by default

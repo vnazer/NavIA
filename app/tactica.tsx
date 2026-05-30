@@ -28,6 +28,7 @@ import { MOBOverlay } from "@/features/seguridad/components/MOBOverlay";
 import { PanelSeguridadBotones } from "@/features/seguridad/components/PanelSeguridadBotones";
 import { useEffect } from "react";
 import { WetScreenLock } from "@/features/ui/components/WetScreenLock";
+import { decir } from "@/lib/voz/servicio";
 
 export default function PantallaTactica() {
   const router = useRouter();
