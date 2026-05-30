@@ -96,6 +96,27 @@ export function CardVientoSpot({ spot, punto, esAhora }: Props) {
         Fuerza {beaufort.fuerza} · {beaufort.nombre}
       </div>
 
+      <div style={{
+        display: "flex",
+        gap: 16,
+        marginTop: 10,
+        paddingTop: 8,
+        borderTop: `1px solid ${txtColor === "#fff" ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)"}`,
+      }}>
+        {punto.olaMt != null && (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: 9, opacity: 0.75, textTransform: "uppercase", fontWeight: 700 }}>Olas</span>
+            <span style={{ fontSize: 15, fontWeight: 700, marginTop: 1 }}>🌊 {punto.olaMt.toFixed(1)}m</span>
+          </div>
+        )}
+        {punto.temperaturaC != null && (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: 9, opacity: 0.75, textTransform: "uppercase", fontWeight: 700 }}>Temp</span>
+            <span style={{ fontSize: 15, fontWeight: 700, marginTop: 1 }}>🌡️ {Math.round(punto.temperaturaC)}°C</span>
+          </div>
+        )}
+      </div>
+
       <FilaAtmosfera punto={punto} txtColor={txtColor} />
     </div>
   );

@@ -1,0 +1,371 @@
+// app/regata.tsx — EJEMPLO de cómo migrar tu pantalla actual al sistema NavIA.
+// Este archivo está pensado como referencia. Copialo, comparalo con tu
+// archivo actual y migrá pieza por pieza.
+
+import { useMemo, useCallback } from "react";
+import { ScrollView, View, Text, Pressable } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ChevronLeft, Play, Square, Signal, MoreHorizontal } from "lucide-react-native";
+
+import { SPOTS } from "@/features/spots/data/spots";
+import { useSpotStore } from "@/features/spots/store/useSpotStore";
+import { useBarcoStore } from "@/features/polar/store/useBarcoStore";
+import { useRegataStore } from "@/features/regata/store/useRegataStore";
+import { useTrackingGPS } from "@/features/regata/hooks/useTrackingGPS";
+import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
+import { calcularRendimiento } from "@/features/regata/lib/calculosNavegacion";
+import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
+import { useRaceTimer } from "@/features/race-timer/hooks/useRaceTimer";
+
+// ⬇ El kit nuevo
+import { useColores, useEsDeck } from "@/lib/tema";
+import {
+  MetricCard,
+  TimerHero,
+  ShiftBadge,
+  AlertBanner,
+  ActionButton,
+  fuenteNum,
+  fuenteNumGigante,
+  estiloLabel,
+  fuenteUIBold,
+} from "@/features/ui";
+
+export default function PantallaRegata() {
+  const router = useRouter();
+  const c = useColores();
+  const esDeck = useEsDeck();
+
+  const barco = useBarcoStore((s) => s.getBarcoActual());
+  const spotId = useSpotStore((s) => s.spotIdSeleccionado);
+  const overrides = useSpotStore((s) => s.overrides);
+  const spot = useMemo(() => {
+    const base = SPOTS.find((s) => s.id === spotId) ?? SPOTS[0];
+    const ov = overrides[base.id];
+    return ov ? { ...base, lat: ov.lat, lon: ov.lon } : base;
+  }, [spotId, overrides]);
+
+  const { pronostico } = usePronosticoViento();
+  const sesion = useRegataStore((s) => s.sesionActiva);
+  const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
+  const terminarSesion = useRegataStore((s) => s.terminarSesion);
+  const agregarPunto = useRegataStore((s) => s.agregarPunto);
+  const boyasGlobales = useBoyasStore((s) => s.boyas);
+  const boyasActivas = sesion?.boyasSnapshot ?? boyasGlobales;
+
+  const vientoActual = useMemo(() => {
+    if (!pronostico) return null;
+    const ahora = Date.now();
+    return (
+      pronostico.puntos.find((p) => new Date(p.hora).getTime() >= ahora) ??
+      pronostico.puntos[0] ??
+      null
+    );
+  }, [pronostico]);
+
+  const trackingActivo = sesion != null;
+  const { permiso, ultimoPunto, error } = useTrackingGPS({
+    activo: trackingActivo,
+    onPunto: agregarPunto,
+  });
+
+  const rendimiento = useMemo(() => {
+    if (!ultimoPunto || !vientoActual) return null;
+    return calcularRendimiento(
+      barco.polar,
+      ultimoPunto.cogGrados,
+      ultimoPunto.sogKts,
+      vientoActual.direccionGrados,
+      vientoActual.velocidadNudos,
+    );
+  }, [ultimoPunto, vientoActual, barco.polar]);
+
+  const { tiempoRestanteMs, fase, activo: timerActivo } = useRaceTimer();
+
+  const handleIniciar = useCallback(() => {
+    iniciarSesion({
+      nombre: `Regata ${new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}`,
+      barcoId: barco.id,
+      spotId: spot.id,
+      vientoSnapshot: vientoActual,
+      boyasSnapshot: boyasGlobales,
+    });
+  }, [iniciarSesion, barco.id, spot.id, vientoActual, boyasGlobales]);
+
+  // ─── Caso 1: aún no se inició la regata
+  if (!trackingActivo) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+        <Header onBack={() => router.back()} titulo="REGATA" />
+        <View style={{ padding: 20, gap: 12, flex: 1 }}>
+          <Text
+            style={[
+              fuenteUIBold,
+              { fontSize: 28, color: c.text, letterSpacing: -0.6 },
+            ]}
+          >
+            Lista de control
+          </Text>
+          <Text style={{ color: c.text2, fontSize: 13, lineHeight: 20 }}>
+            Confirma estos datos antes de iniciar el tracking.
+          </Text>
+
+          <ChecklistRow label="BARCO"  valor={barco.nombre} sub="Polar cargado" />
+          <ChecklistRow label="SPOT"   valor={spot.nombre}  sub={spot.club ?? ""} />
+          <ChecklistRow
+            label="VIENTO"
+            valor={
+              vientoActual
+                ? `${Math.round(vientoActual.velocidadNudos)} kt · ${Math.round(vientoActual.direccionGrados)}°`
+                : "Sin pronóstico"
+            }
+          />
+          <ChecklistRow label="BOYAS" valor={`${boyasActivas.length} marcadas`} />
+
+          <View style={{ flex: 1 }} />
+
+          <AlertBanner
+            kind="info"
+            titulo="GPS Y VOZ"
+            cuerpo="Al iniciar, comenzamos a grabar tu posición y se activan los avisos por voz."
+          />
+
+          <ActionButton variante="primary" grande onPress={handleIniciar} icono={<Play size={22} color={esDeck ? c.bg : "#fff"} />}>
+            Iniciar regata
+          </ActionButton>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ─── Caso 2: en vivo
+  const shiftKind: "lift" | "header" =
+    rendimiento && rendimiento.deltaPolar >= 0 ? "lift" : "header";
+  const shiftDeg = Math.abs(Math.round(rendimiento?.deltaPolar ?? 0));
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Sub-header */}
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingVertical: 10,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 99, backgroundColor: c.lift }} />
+          <Text style={[estiloLabel, { color: c.text2 }]}>
+            EN VIVO · {spot.nombre.toUpperCase()}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <Pressable hitSlop={8}><Signal size={18} color={c.text2} /></Pressable>
+          <Pressable hitSlop={8}><MoreHorizontal size={18} color={c.text2} /></Pressable>
+        </View>
+      </View>
+
+      {/* Timer compacto */}
+      <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+        <TimerHero tiempoMs={timerActivo ? tiempoRestanteMs : 0} fase={mapFase(fase)} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* SOG Hero */}
+        <View
+          style={{
+            paddingHorizontal: 20,
+            flexDirection: "row",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+          }}
+        >
+          <View>
+            <Text style={[estiloLabel, { color: c.text3 }]}>SOG · NUDOS</Text>
+            <Text
+              style={[
+                fuenteNumGigante,
+                {
+                  fontSize: 110,
+                  color: c.text,
+                  lineHeight: 110,
+                  letterSpacing: -3,
+                  marginTop: 4,
+                },
+              ]}
+            >
+              {(ultimoPunto?.sogKts ?? 0).toFixed(1)}
+            </Text>
+          </View>
+          <View style={{ alignItems: "flex-end", gap: 4, paddingBottom: 12 }}>
+            <Text style={[estiloLabel, { color: c.text3 }]}>%POLAR</Text>
+            <Text
+              style={[
+                fuenteNumGigante,
+                {
+                  fontSize: 32,
+                  color: (rendimiento?.porcentajePolar ?? 0) >= 85 ? c.lift : c.warn,
+                },
+              ]}
+            >
+              {Math.round(rendimiento?.porcentajePolar ?? 0)}
+            </Text>
+          </View>
+        </View>
+
+        {/* COG / TWA / Viento */}
+        <View
+          style={{
+            paddingHorizontal: 20,
+            flexDirection: "row",
+            gap: 8,
+            marginTop: 8,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <MetricCard
+              label="COG"
+              valor={`${Math.round(ultimoPunto?.cogGrados ?? 0)}°`}
+              unidad="rumbo"
+              tamaño="medio"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <MetricCard
+              label="TWA"
+              valor={`${Math.abs(Math.round(rendimiento?.twa ?? 0))}°`}
+              unidad="ceñida"
+              tamaño="medio"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <MetricCard
+              label="VIENTO"
+              valor={Math.round(vientoActual?.velocidadNudos ?? 0)}
+              sub={`${Math.round(vientoActual?.direccionGrados ?? 0)}°`}
+              unidad="kt"
+              tamaño="medio"
+            />
+          </View>
+        </View>
+
+        {/* Wind shift */}
+        {rendimiento && (
+          <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+            <View
+              style={{
+                backgroundColor: c.surface,
+                borderWidth: 1,
+                borderColor: c.border,
+                padding: 14,
+              }}
+            >
+              <Text style={[estiloLabel, { color: c.text3 }]}>
+                WIND SHIFT · 60 S
+              </Text>
+              <View style={{ marginTop: 8 }}>
+                <ShiftBadge tipo={shiftKind} grados={shiftDeg} />
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Errores GPS */}
+        {error && (
+          <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+            <AlertBanner kind="danger" titulo="GPS" cuerpo={error} />
+          </View>
+        )}
+        {permiso === "pendiente" && (
+          <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+            <AlertBanner
+              kind="warn"
+              titulo="PERMISO PENDIENTE"
+              cuerpo="Solicitando permiso de ubicación…"
+            />
+          </View>
+        )}
+      </ScrollView>
+
+      {/* CTA inferior */}
+      <View
+        style={{
+          padding: 20,
+          flexDirection: "row",
+          gap: 8,
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <ActionButton variante="danger" grande onPress={terminarSesion} icono={<Square size={18} color={esDeck ? c.bg : "#fff"} />}>
+            Finalizar
+          </ActionButton>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ─── Subcomponentes locales ───────────────────────────────────────────────
+function Header({ onBack, titulo }: { onBack: () => void; titulo: string }) {
+  const c = useColores();
+  return (
+    <View
+      style={{
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <Pressable onPress={onBack} hitSlop={12}>
+        <ChevronLeft size={24} color={c.text2} />
+      </Pressable>
+      <Text style={[estiloLabel, { color: c.text2 }]}>{titulo}</Text>
+    </View>
+  );
+}
+
+function ChecklistRow({ label, valor, sub }: { label: string; valor: string; sub?: string }) {
+  const c = useColores();
+  return (
+    <View
+      style={{
+        backgroundColor: c.surface,
+        borderWidth: 1,
+        borderColor: c.border,
+        padding: 14,
+      }}
+    >
+      <Text style={[estiloLabel, { color: c.text3 }]}>{label}</Text>
+      <Text
+        style={{
+          fontFamily: "Inter-Bold",
+          fontSize: 15,
+          color: c.text,
+          marginTop: 4,
+        }}
+      >
+        {valor}
+      </Text>
+      {sub && (
+        <Text style={{ fontSize: 11, color: c.text3, marginTop: 2 }}>
+          {sub}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+// Mapea la fase del race timer existente al tipo del kit
+function mapFase(fase: string): "off" | "warning" | "prep" | "onemin" | "start" | "racing" {
+  if (fase === "preparatory") return "prep";
+  if (fase === "warning") return "warning";
+  if (fase === "onemin") return "onemin";
+  if (fase === "start") return "start";
+  if (fase === "racing") return "racing";
+  return "off";
+}

@@ -1,19 +1,16 @@
-// Capa que renderiza el grid de flechas de viento sobre el MapaSpots.
-// Recibe el índice de hora a mostrar (0 = ahora, 1 = +1h, etc.).
-// Si la capa está apagada, no renderiza nada.
-// MODIFICADO EN PROMPT 3.1: pasa rachasNudos y hora a las flechas para el popup.
-
 import { FlechaViento } from "./FlechaViento";
+import { FichaOlaMapa } from "./FichaOlaMapa";
+import { FichaClimaMapa } from "./FichaClimaMapa";
 import type { PronosticoGrid } from "../services/openMeteoGrid";
 
 type Props = {
   pronostico: PronosticoGrid | null;
   indiceHora: number;
-  visible: boolean;
+  modo: "viento" | "olas" | "clima" | "off";
 };
 
-export function CapaVientoMapa({ pronostico, indiceHora, visible }: Props) {
-  if (!visible || !pronostico) return null;
+export function CapaVientoMapa({ pronostico, indiceHora, modo }: Props) {
+  if (modo === "off" || !pronostico) return null;
 
   return (
     <>
@@ -21,17 +18,46 @@ export function CapaVientoMapa({ pronostico, indiceHora, visible }: Props) {
         const pronosticoHora = puntoGrid.puntos[indiceHora];
         if (!pronosticoHora) return null;
 
-        return (
-          <FlechaViento
-            key={`${puntoGrid.lat}-${puntoGrid.lon}-${i}`}
-            lat={puntoGrid.lat}
-            lon={puntoGrid.lon}
-            velocidadNudos={pronosticoHora.velocidadNudos}
-            direccionGrados={pronosticoHora.direccionGrados}
-            rachasNudos={pronosticoHora.rachasNudos}
-            hora={pronosticoHora.hora}
-          />
-        );
+        if (modo === "viento") {
+          return (
+            <FlechaViento
+              key={`wind-${puntoGrid.lat}-${puntoGrid.lon}-${i}`}
+              lat={puntoGrid.lat}
+              lon={puntoGrid.lon}
+              velocidadNudos={pronosticoHora.velocidadNudos}
+              direccionGrados={pronosticoHora.direccionGrados}
+              rachasNudos={pronosticoHora.rachasNudos}
+              hora={pronosticoHora.hora}
+            />
+          );
+        }
+
+        if (modo === "olas") {
+          return (
+            <FichaOlaMapa
+              key={`waves-${puntoGrid.lat}-${puntoGrid.lon}-${i}`}
+              lat={puntoGrid.lat}
+              lon={puntoGrid.lon}
+              olaMt={pronosticoHora.olaMt}
+              hora={pronosticoHora.hora}
+            />
+          );
+        }
+
+        if (modo === "clima") {
+          return (
+            <FichaClimaMapa
+              key={`weather-${puntoGrid.lat}-${puntoGrid.lon}-${i}`}
+              lat={puntoGrid.lat}
+              lon={puntoGrid.lon}
+              temperaturaC={pronosticoHora.temperaturaC}
+              probLluvia={pronosticoHora.probLluvia}
+              hora={pronosticoHora.hora}
+            />
+          );
+        }
+
+        return null;
       })}
     </>
   );

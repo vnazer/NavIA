@@ -134,7 +134,7 @@ export default function PantallaPrincipal() {
                 </Text>
               </Pressable>
             </Link>
-            <Link href="/configuracion" asChild>
+            <Link href={"/configuracion" as never} asChild>
               <Pressable className="flex-row items-center justify-center rounded-xl bg-slate-200 p-3 dark:bg-slate-700">
                 <Settings size={16} color={colorSettings} />
               </Pressable>

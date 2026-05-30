@@ -7,15 +7,31 @@
     "scheme": "navia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E2A4E"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "cl.magama.navia"
+      "bundleIdentifier": "cl.magama.navia",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "NavIA usa tu ubicación para mostrar tu posición en el mapa y registrar el track GPS durante la regata.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "NavIA usa tu ubicación en segundo plano para registrar el track GPS completo durante la regata."
+      }
     },
     "android": {
       "package": "cl.magama.navia",
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
-      }
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0E2A4E"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -23,7 +39,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "NavIA usa tu ubicación para mostrar tu posición en el mapa y registrar el track GPS durante la regata.",
+          "locationAlwaysAndWhenInUsePermission": "NavIA usa tu ubicación en segundo plano para registrar el track GPS completo durante la regata.",
+          "isIosBackgroundLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

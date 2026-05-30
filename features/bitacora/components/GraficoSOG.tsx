@@ -3,6 +3,13 @@
 // Línea punteada gris = BSP teórico esperado del polar
 
 import { View, Text } from "react-native";
+import Svg, {
+  Rect,
+  Line,
+  Polyline,
+  G,
+  Text as SvgText,
+} from "react-native-svg";
 import type { PuntoAnalizado } from "../lib/analitica";
 
 type Props = {
@@ -14,8 +21,8 @@ type Props = {
 export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
   if (puntos.length < 2) {
     return (
-      <View className="rounded-xl bg-slate-100 p-4">
-        <Text className="text-sm text-slate-600">
+      <View style={{ borderRadius: 12, backgroundColor: "#f1f5f9", padding: 16 }}>
+        <Text style={{ fontSize: 14, color: "#475569" }}>
           Track demasiado corto para graficar.
         </Text>
       </View>
@@ -68,13 +75,12 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
 
   return (
     <View>
-      <svg
+      <Svg
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        xmlns="http://www.w3.org/2000/svg"
       >
-        <rect
+        <Rect
           x={padding.left}
           y={padding.top}
           width={plotW}
@@ -84,8 +90,8 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
         />
 
         {ticksY.map((s) => (
-          <g key={`y-${s}`}>
-            <line
+          <G key={`y-${s}`}>
+            <Line
               x1={padding.left}
               x2={padding.left + plotW}
               y1={yFromSog(s)}
@@ -93,99 +99,99 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
               stroke="#e2e8f0"
               strokeDasharray="2,3"
             />
-            <text
+            <SvgText
               x={padding.left - 6}
               y={yFromSog(s) + 4}
-              fontSize="10"
+              fontSize={10}
               fill="#64748b"
               textAnchor="end"
               fontFamily="system-ui"
             >
               {s}
-            </text>
-          </g>
+            </SvgText>
+          </G>
         ))}
 
         {ticksX.map((t) => (
-          <g key={`x-${t}`}>
-            <line
+          <G key={`x-${t}`}>
+            <Line
               x1={xFromT(t)}
               x2={xFromT(t)}
               y1={padding.top + plotH}
               y2={padding.top + plotH + 4}
               stroke="#94a3b8"
             />
-            <text
+            <SvgText
               x={xFromT(t)}
               y={padding.top + plotH + 18}
-              fontSize="10"
+              fontSize={10}
               fill="#64748b"
               textAnchor="middle"
               fontFamily="system-ui"
             >
               {formatearTiempo(t)}
-            </text>
-          </g>
+            </SvgText>
+          </G>
         ))}
 
-        <text
+        <SvgText
           x={padding.left - 28}
           y={padding.top - 4}
-          fontSize="10"
+          fontSize={10}
           fill="#475569"
           fontFamily="system-ui"
           fontWeight="600"
         >
           kt
-        </text>
+        </SvgText>
 
-        <polyline
+        <Polyline
           points={puntosTeorico}
           fill="none"
           stroke="#94a3b8"
-          strokeWidth="1.5"
+          strokeWidth={1.5}
           strokeDasharray="4,3"
         />
 
-        <polyline
+        <Polyline
           points={puntosReal}
           fill="none"
           stroke="#0a4d7a"
-          strokeWidth="2"
+          strokeWidth={2}
         />
 
-        <g transform={`translate(${padding.left + 8}, ${padding.top + 8})`}>
-          <line x1="0" y1="0" x2="18" y2="0" stroke="#0a4d7a" strokeWidth="2" />
-          <text
-            x="22"
-            y="3"
-            fontSize="10"
+        <G transform={`translate(${padding.left + 8}, ${padding.top + 8})`}>
+          <Line x1={0} y1={0} x2={18} y2={0} stroke="#0a4d7a" strokeWidth={2} />
+          <SvgText
+            x={22}
+            y={3}
+            fontSize={10}
             fill="#0f172a"
             fontWeight="600"
             fontFamily="system-ui"
           >
             SOG real
-          </text>
-          <line
-            x1="0"
-            y1="16"
-            x2="18"
-            y2="16"
+          </SvgText>
+          <Line
+            x1={0}
+            y1={16}
+            x2={18}
+            y2={16}
             stroke="#94a3b8"
-            strokeWidth="1.5"
+            strokeWidth={1.5}
             strokeDasharray="4,3"
           />
-          <text
-            x="22"
-            y="19"
-            fontSize="10"
+          <SvgText
+            x={22}
+            y={19}
+            fontSize={10}
             fill="#475569"
             fontFamily="system-ui"
           >
             BSP teórico (polar)
-          </text>
-        </g>
-      </svg>
+          </SvgText>
+        </G>
+      </Svg>
     </View>
   );
 }

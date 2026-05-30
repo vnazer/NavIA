@@ -68,38 +68,38 @@ export function RaceTimerWidget() {
         <View className="flex-row gap-2">
           <Pressable
             onPress={() => iniciarConVoz(iniciar, 5 * 60)}
-            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 p-3"
+            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 min-h-[48px]"
           >
             <Play size={14} color="white" />
             <Text className="text-sm font-semibold text-white">5 min</Text>
           </Pressable>
           <Pressable
             onPress={() => iniciarConVoz(iniciar, 4 * 60)}
-            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 p-3"
+            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 min-h-[48px]"
           >
             <Play size={14} color="white" />
             <Text className="text-sm font-semibold text-white">4 min</Text>
           </Pressable>
           <Pressable
             onPress={() => iniciarConVoz(iniciar, 60)}
-            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 p-3"
+            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-mar-500 min-h-[48px]"
           >
             <Play size={14} color="white" />
             <Text className="text-sm font-semibold text-white">1 min</Text>
           </Pressable>
         </View>
       ) : (
-        <View className="flex-row gap-2">
+        <View className="flex-row gap-3">
           <Pressable
             onPress={sincronizar}
-            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-amber-500 p-3"
+            className="flex-[2] flex-row items-center justify-center gap-2 rounded-xl bg-amber-500 min-h-[56px]"
           >
-            <RotateCcw size={14} color="white" />
-            <Text className="text-sm font-semibold text-white">Sync</Text>
+            <RotateCcw size={16} color="white" />
+            <Text className="text-base font-bold uppercase text-white tracking-wider">Sync</Text>
           </Pressable>
           <Pressable
             onPress={detener}
-            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-red-600 p-3"
+            className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-red-600 min-h-[56px]"
           >
             <Square size={14} color="white" />
             <Text className="text-sm font-semibold text-white">Stop</Text>

@@ -29,7 +29,7 @@ import { MAPA_CONFIG, TILES } from "../data/config";
 import { iconoSpot } from "./iconos";
 import { PopupSpot } from "./PopupSpot";
 import { SelectorHora } from "./SelectorHora";
-import { ControlCapaViento } from "./ControlCapaViento";
+import { ControlCapaViento, ModoCapa } from "./ControlCapaViento";
 import { ControlModoEdicion } from "./ControlModoEdicion";
 import { CardVientoSpot } from "./CardVientoSpot";
 import { iconoBoya } from "@/features/boyas/components/iconoBoya";
@@ -149,7 +149,7 @@ export default function MapaSpotsInterno() {
   const { pronostico: pronosticoSpot } = usePronosticoViento();
 
   const [indiceHora, setIndiceHora] = useState<number | null>(null);
-  const [capaVientoVisible, setCapaVientoVisible] = useState(true);
+  const [capaGrid, setCapaGrid] = useState<ModoCapa>("viento");
   const [modoEdicion, setModoEdicion] = useState(false);
   const [coordsPendientes, setCoordsPendientes] =
     useState<CoordsPendientes>(null);
@@ -267,6 +267,7 @@ export default function MapaSpotsInterno() {
           attribution={TILES.seamark.atribucion}
           minZoom={TILES.seamark.minZoom}
           maxZoom={MAPA_CONFIG.zoomMax}
+          minNativeZoom={TILES.seamark.minZoom}
         />
 
         <CapturadorLongPress onLongPress={handleLongPress} />
@@ -274,7 +275,7 @@ export default function MapaSpotsInterno() {
         <CapaVientoMapa
           pronostico={pronosticoGrid}
           indiceHora={indiceHoraSeguro}
-          visible={capaVientoVisible && !modoEdicion}
+          modo={modoEdicion ? "off" : capaGrid}
         />
 
         {todosLosSpots.map((spot) => {
@@ -359,8 +360,8 @@ export default function MapaSpotsInterno() {
       />
 
       <ControlCapaViento
-        activa={capaVientoVisible}
-        onToggle={() => setCapaVientoVisible(!capaVientoVisible)}
+        modo={capaGrid}
+        onChange={setCapaGrid}
       />
 
       <ControlProfundidad
@@ -475,7 +476,7 @@ export default function MapaSpotsInterno() {
       )}
 
       {pronosticoGrid &&
-        capaVientoVisible &&
+        capaGrid !== "off" &&
         indiceHora !== null &&
         !modoEdicion && (
           <SelectorHora

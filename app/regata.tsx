@@ -1,7 +1,7 @@
 // Pantalla de regata activa: inicia tracking GPS, muestra SOG/COG en vivo
 // y rendimiento vs polar según viento del spot.
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View, Text, Pressable } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,12 +27,24 @@ import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { MapaRegata } from "@/features/boyas/components/MapaRegata";
 import { ListaBoyasNavegacion } from "@/features/boyas/components/ListaBoyasNavegacion";
 import { MenuRapido } from "@/components/MenuRapido";
+import { useTacticaStore } from "@/features/regata/store/useTacticaStore";
 import { useColorPorTema } from "@/lib/tema/colores";
+import { useTema, useColores } from "@/lib/tema";
+import { decir } from "@/lib/voz/servicio";
+import { NavIACopilotCard } from "@/features/regata/components/NavIACopilotCard";
+import { MOBOverlay } from "@/features/seguridad/components/MOBOverlay";
+import { PanelSeguridadBotones } from "@/features/seguridad/components/PanelSeguridadBotones";
+import { useCopilotoStore } from "@/features/regata/store/useCopilotoStore";
+import { WetScreenLock } from "@/features/ui/components/WetScreenLock";
 
 export default function PantallaRegata() {
   const router = useRouter();
   const barco = useBarcoStore((s) => s.getBarcoActual());
+  const [screenLockActivo, setScreenLockActivo] = useState(false);
   const colorIconoClaro = useColorPorTema("#334155", "#e2e8f0");
+  const c = useColores();
+  const alternarTema = useTema((s) => s.alternar);
+  const modoTema = useTema((s) => s.modo);
 
   const spotId = useSpotStore((s) => s.spotIdSeleccionado);
   const overrides = useSpotStore((s) => s.overrides);
@@ -45,7 +57,7 @@ export default function PantallaRegata() {
   }, [spotId, overrides, customSpots]);
 
   const { pronostico } = usePronosticoViento();
-  // pronostico también se pasa a PanelShifts para histórico de shifts
+  // pronostico también se pasa to PanelShifts para histórico de shifts
   const sesion = useRegataStore((s) => s.sesionActiva);
   const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
   const terminarSesion = useRegataStore((s) => s.terminarSesion);
@@ -72,6 +84,13 @@ export default function PantallaRegata() {
     onPunto: agregarPunto,
   });
 
+  const modoTactico = useTacticaStore((s) => s.modoActivo);
+  const boyaWaypointId = useTacticaStore((s) => s.boyaWaypointId);
+  const waypointActivo = useMemo(() => {
+    if (modoTactico !== "waypoint" || !boyaWaypointId) return null;
+    return boyasActivas.find((b) => b.id === boyaWaypointId) ?? null;
+  }, [modoTactico, boyaWaypointId, boyasActivas]);
+
   const rendimiento = useMemo(() => {
     if (!ultimoPunto || !vientoActual) return null;
     return calcularRendimiento(
@@ -80,8 +99,24 @@ export default function PantallaRegata() {
       ultimoPunto.sogKts,
       vientoActual.direccionGrados,
       vientoActual.velocidadNudos,
+      ultimoPunto ? { lat: ultimoPunto.lat, lon: ultimoPunto.lon } : null,
+      waypointActivo ? { lat: waypointActivo.lat, lon: waypointActivo.lon } : null,
     );
-  }, [ultimoPunto, vientoActual, barco.polar]);
+  }, [ultimoPunto, vientoActual, barco.polar, waypointActivo]);
+
+  // Procesar Telemetría con NavIA Copilot
+  const procesarTelemetria = useCopilotoStore((s) => s.procesarTelemetria);
+  useEffect(() => {
+    if (trackingActivo && vientoActual) {
+      procesarTelemetria(
+        rendimiento,
+        vientoActual.velocidadNudos,
+        vientoActual.direccionGrados,
+        1.2, // Olas estimadas del spot
+        ultimoPunto?.cogGrados ?? 0
+      );
+    }
+  }, [rendimiento, vientoActual, ultimoPunto, trackingActivo, procesarTelemetria]);
 
   const handleIniciar = useCallback(() => {
     iniciarSesion({
@@ -98,17 +133,66 @@ export default function PantallaRegata() {
     : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
-      <View className="flex-row items-center gap-3 bg-mar-700 p-4">
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: c.navy, padding: 16 }}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <ChevronLeft size={24} color="white" />
         </Pressable>
-        <Text className="flex-1 text-xl font-semibold text-white">Regata</Text>
+        <Text style={{ flex: 1, fontSize: 18, fontFamily: "Inter-Bold", color: "white" }}>
+          Regata
+        </Text>
+        
+        {/* Toggle de Modo Deck / Cubierta */}
+        <Pressable
+          onPress={alternarTema}
+          style={{
+            backgroundColor: modoTema === "deck_extremo" ? "#EAFB00" : "rgba(255,255,255,0.18)",
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 6,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 11,
+              fontFamily: "Inter-Bold",
+              color: modoTema === "deck_extremo" ? "#000000" : "#FFFFFF",
+            }}
+          >
+            {modoTema === "light" ? "☀️ Light" : modoTema === "deck" ? "🌙 Dark" : "⚡ Deck!"}
+          </Text>
+        </Pressable>
+
+        {/* Botón de Bloqueo de Pantalla Húmeda */}
+        <Pressable
+          onPress={() => {
+            setScreenLockActivo(true);
+            decir("Modo cubierta bloqueado");
+          }}
+          style={{
+            backgroundColor: "rgba(255,255,255,0.18)",
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 6,
+          }}
+        >
+          <Text style={{ fontSize: 11, fontFamily: "Inter-Bold", color: "#FFFFFF" }}>
+            🔒 Bloquear
+          </Text>
+        </Pressable>
+
         <MenuRapido />
       </View>
 
-      <ScrollView contentContainerClassName="p-4 gap-4">
-        {/* Estado */}
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+        {/* Hombre al Agua (MOB) - Prioridad 1 */}
+        <MOBOverlay />
+
+        {/* Botones de Activación de Seguridad MOB/SOS */}
+        <PanelSeguridadBotones />
+
+        {/* NavIA Copilot Tactical Card */}
+        <NavIACopilotCard />
         <View className="rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
           <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Spot · Barco</Text>
           <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
@@ -168,7 +252,7 @@ export default function PantallaRegata() {
         </View>
 
         {/* Acceso al modo táctico (waypoint + prestart) */}
-        <Link href="/tactica" asChild>
+        <Link href={"/tactica" as never} asChild>
           <Pressable className="flex-row items-center justify-center gap-2 rounded-xl bg-mar-700 p-3">
             <Compass size={16} color="white" />
             <Text className="text-sm font-semibold text-white">
@@ -285,6 +369,18 @@ export default function PantallaRegata() {
           </Text>
         )}
       </ScrollView>
+
+      {/* Pantalla Bloqueada - Modo Cubierta / Wet Screen Lock */}
+      <WetScreenLock
+        activo={screenLockActivo}
+        onDesbloquear={() => setScreenLockActivo(false)}
+        sog={ultimoPunto?.sogKts ?? 0}
+        cog={ultimoPunto?.cogGrados ?? 0}
+        vmg={rendimiento?.vmg}
+        vmc={rendimiento?.vmc}
+        distanciaBoya={rendimiento?.distanciaToWaypoint}
+        rumboBoya={rendimiento?.headingToWaypoint}
+      />
     </SafeAreaView>
   );
 }

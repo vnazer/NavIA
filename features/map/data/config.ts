@@ -38,3 +38,9 @@ export const TILES = {
       '&copy; <a href="https://www.esri.com">Esri</a> World Ocean Reference',
   },
 };
+
+/** Plantillas de tiles para react-native-maps (UrlTile). */
+export const TILES_NATIVO = {
+  base: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  seamark: "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
+};

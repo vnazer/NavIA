@@ -68,6 +68,34 @@ export function PopupSpot({ spot, esActual, punto }: Props) {
           }}>
             Fuerza {beaufort.fuerza} · {beaufort.nombre}
           </div>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "8px 12px",
+            marginTop: 8,
+            paddingTop: 8,
+            borderTop: "1px dashed #e2e8f0",
+          }}>
+            {punto.olaMt !== undefined && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+                <span style={{ fontSize: 14 }}>🌊</span>
+                <span><strong>{punto.olaMt.toFixed(1)}m</strong> olas</span>
+              </div>
+            )}
+            {punto.temperaturaC !== undefined && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+                <span style={{ fontSize: 14 }}>🌡️</span>
+                <span><strong>{Math.round(punto.temperaturaC)}°C</strong> temp</span>
+              </div>
+            )}
+            {punto.probLluvia !== undefined && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", gridColumn: "span 2" }}>
+                <span style={{ fontSize: 14 }}>🌧️</span>
+                <span>Prob. lluvia: <strong>{punto.probLluvia}%</strong></span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

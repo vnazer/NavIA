@@ -1,39 +1,61 @@
-// Botón flotante para encender/apagar la capa de FLECHAS de viento por spot
-// (CapaVientoMapa). Va debajo del toggle de streamlines (CapaViento / Prompt 10).
-
-import { ArrowUpRight } from "lucide-react-native";
+export type ModoCapa = "viento" | "olas" | "clima" | "off";
 
 type Props = {
-  activa: boolean;
-  onToggle: () => void;
+  modo: ModoCapa;
+  onChange: (modo: ModoCapa) => void;
 };
 
-export function ControlCapaViento({ activa, onToggle }: Props) {
+export function ControlCapaViento({ modo, onChange }: Props) {
+  const opciones: { id: ModoCapa; label: string; icon: string }[] = [
+    { id: "viento", label: "Viento", icon: "💨" },
+    { id: "olas", label: "Olas", icon: "🌊" },
+    { id: "clima", label: "Clima", icon: "🌡️" },
+    { id: "off", label: "Off", icon: "❌" },
+  ];
+
   return (
-    <button
-      onClick={onToggle}
-      title={activa ? "Apagar flechas de viento" : "Encender flechas de viento"}
+    <div
       style={{
         position: "absolute",
         top: 64,
         right: 16,
         zIndex: 1000,
-        backgroundColor: activa ? "#0a4d7a" : "rgba(255, 255, 255, 0.95)",
-        color: activa ? "white" : "#334155",
-        border: "none",
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
         borderRadius: 8,
-        padding: "10px 12px",
-        cursor: "pointer",
+        padding: 4,
         display: "flex",
-        alignItems: "center",
-        gap: 6,
-        fontSize: 13,
-        fontWeight: 600,
+        gap: 2,
         boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+        fontFamily: "system-ui, sans-serif",
       }}
     >
-      <ArrowUpRight size={16} color={activa ? "white" : "#334155"} />
-      <span>Flechas</span>
-    </button>
+      {opciones.map((opt) => {
+        const activa = opt.id === modo;
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onChange(opt.id)}
+            title={`Visualización: ${opt.label}`}
+            style={{
+              backgroundColor: activa ? "#0a4d7a" : "transparent",
+              color: activa ? "white" : "#334155",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 10px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              fontWeight: 600,
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>{opt.icon}</span>
+            <span>{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

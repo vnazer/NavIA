@@ -90,15 +90,18 @@ export const useBoyasStore = create<Estado & Acciones>()(
           };
           const aplanadas: Boya[] = [];
           for (const spotId in old.boyasPorSpot ?? {}) {
-            for (const b of old.boyasPorSpot[spotId]) {
-              aplanadas.push({
-                id: b.id,
-                tipo: "custom",
-                lat: b.lat,
-                lon: b.lon,
-                label: b.nombre,
-                fechaCreacion: Date.now(),
-              });
+            const list = old.boyasPorSpot?.[spotId];
+            if (list) {
+              for (const b of list) {
+                aplanadas.push({
+                  id: b.id,
+                  tipo: "custom",
+                  lat: b.lat,
+                  lon: b.lon,
+                  label: b.nombre,
+                  fechaCreacion: Date.now(),
+                });
+              }
             }
           }
           return { boyas: aplanadas } as Partial<Estado & Acciones>;

@@ -1,4 +1,4 @@
-// Layout raíz de la app. Importa estilos globales y configura SafeArea.
+// Layout raíz de la app. Importa estilos globales, carga fuentes y configura SafeArea.
 import "../global.css";
 import { useEffect } from "react";
 import { Stack } from "expo-router";
@@ -9,6 +9,7 @@ import { useTemaStore } from "@/lib/tema/store";
 import { useVozStore } from "@/lib/voz/servicio";
 import { View } from "react-native";
 import { MenuRapido } from "@/components/MenuRapido";
+import { useFonts } from "expo-font";
 
 const headerConMenu = {
   headerRight: () => (
@@ -22,6 +23,14 @@ export default function RootLayout() {
   const { setColorScheme } = useColorScheme();
   const oscuro = useTemaStore((s) => s.oscuro);
 
+  const [loaded] = useFonts({
+    "Inter-Regular": require("../assets/fonts/Inter-Regular.ttf"),
+    "Inter-Medium": require("../assets/fonts/Inter-Medium.ttf"),
+    "Inter-Bold": require("../assets/fonts/Inter-Bold.ttf"),
+    "JetBrainsMono-Bold": require("../assets/fonts/JetBrainsMono-Bold.ttf"),
+    "JetBrainsMono-ExtraBold": require("../assets/fonts/JetBrainsMono-ExtraBold.ttf"),
+  });
+
   // Sincronizar tema con NativeWind al arrancar y cuando cambia
   useEffect(() => {
     setColorScheme(oscuro ? "dark" : "light");
@@ -33,14 +42,16 @@ export default function RootLayout() {
     useVozStore.persist.rehydrate();
   }, []);
 
+  if (!loaded) return null;
+
   return (
     <SafeAreaProvider>
       <StatusBar style={oscuro ? "light" : "auto"} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: "#0a4d7a" },
+          headerStyle: { backgroundColor: oscuro ? "#0A0F18" : "#0a4d7a" },
           headerTintColor: "#ffffff",
-          headerTitleStyle: { fontWeight: "600" },
+          headerTitleStyle: { fontWeight: "600", fontFamily: "Inter-Bold" },
         }}
       >
         <Stack.Screen

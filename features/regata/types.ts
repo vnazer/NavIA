@@ -44,4 +44,12 @@ export type Rendimiento = {
   bspActual: number;
   /** Porcentaje del polar (>100 = mejor que polar) */
   porcentajePolar: number;
+  /** VMG (Velocity Made Good) al viento en nudos (ceñida/popa) */
+  vmg?: number;
+  /** VMC (Velocity Made Good to Course/Waypoint) en nudos */
+  vmc?: number;
+  /** Rumbo directo a la boya o waypoint activo en grados */
+  headingToWaypoint?: number;
+  /** Distancia en metros a la boya o waypoint activo */
+  distanciaToWaypoint?: number;
 };
