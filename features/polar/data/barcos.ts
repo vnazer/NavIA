@@ -2,6 +2,8 @@
 // El usuario selecciona uno desde la app y se persiste en AsyncStorage.
 
 import type { Barco } from "../types";
+import { POLAR_ILCA4 } from "./ilca4";
+import { POLAR_ILCA6 } from "./ilca6";
 import { POLAR_ILCA7 } from "./ilca7";
 import { POLAR_IRC_CLASICO } from "./ircClasico";
 
@@ -13,6 +15,22 @@ export const BARCOS: Barco[] = [
     descripcion:
       "Ex Laser Standard. Vela única 7.06 m². Para piloto 78-85 kg en aguas planas.",
     polar: POLAR_ILCA7,
+  },
+  {
+    id: "ilca6",
+    nombre: "ILCA 6",
+    clase: "Monotipo olímpico (Radial)",
+    descripcion:
+      "Ex Laser Radial. Vela única 5.76 m². Para piloto 65-75 kg.",
+    polar: POLAR_ILCA6,
+  },
+  {
+    id: "ilca4",
+    nombre: "ILCA 4",
+    clase: "Monotipo juvenil (4.7)",
+    descripcion:
+      "Ex Laser 4.7. Vela única 4.70 m². Para piloto 45-60 kg.",
+    polar: POLAR_ILCA4,
   },
   {
     id: "irc-clasico",
