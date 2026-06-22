@@ -6,8 +6,11 @@
 //   sobre la misma conexión (aisstream lo soporta).
 // - Mensajes entrantes se acumulan en un ref y se flushean a state cada 1 s
 //   (evita ~100 setState/seg que ahogan a React).
+// - Auto-reconexión con backoff exponencial (1s, 2s, 4s, … máximo 30s) cuando
+//   el WS se cierra inesperadamente mientras está activo. Se cancela si el usuario
+//   desactiva AIS.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type BarcoAis = {
   mmsi: string;
@@ -46,6 +49,9 @@ export function useAisStream({ activo, bbox }: Props) {
   const wsRef = useRef<WebSocket | null>(null);
   const bufferRef = useRef<Map<string, BarcoAis>>(new Map());
   const bboxRef = useRef<Bbox | null>(bbox);
+  // Backoff para reconexión automática
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelayRef = useRef(1000); // empieza en 1 s
   useEffect(() => {
     bboxRef.current = bbox;
   }, [bbox]);
@@ -59,84 +65,127 @@ export function useAisStream({ activo, bbox }: Props) {
   }, [bboxKey]);
 
   // Conexión WS — depende SOLO de `activo`. Bbox cambia ⇒ re-subscribe sin cerrar.
+  // Incluye auto-reconexión con backoff exponencial (1s → 2s → 4s → … → 30s max).
   useEffect(() => {
+    let cancelled = false;
+
+    const clearRetry = () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
+      clearRetry();
+      const delay = retryDelayRef.current;
+      console.log(`[AIS] Reconectando en ${delay / 1000}s…`);
+      retryTimerRef.current = setTimeout(() => {
+        if (cancelled) return;
+        retryDelayRef.current = Math.min(delay * 2, 30_000);
+        openConnection();
+      }, delay);
+    };
+
+    const openConnection = () => {
+      if (cancelled) return;
+      const apiKey = process.env.EXPO_PUBLIC_AISSTREAM_API_KEY;
+      if (!apiKey) {
+        console.warn(
+          "[AIS] No hay API key. Define EXPO_PUBLIC_AISSTREAM_API_KEY en .env.local",
+        );
+        return;
+      }
+
+      // Cerrar conexión previa si existe
+      if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+        wsRef.current.close();
+      }
+
+      const ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (cancelled) { ws.close(); return; }
+        console.log("[AIS] WebSocket conectado");
+        // Éxito → resetear backoff
+        retryDelayRef.current = 1000;
+        const actual = bboxRef.current;
+        if (actual) ws.send(buildSuscripcion(apiKey, actual));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          const tipo = msg.MessageType;
+          const mmsi = String(msg.MetaData?.MMSI ?? "");
+          if (!mmsi) return;
+
+          const buffer = bufferRef.current;
+          const existente = buffer.get(mmsi);
+          if (tipo === "PositionReport") {
+            const pr = msg.Message.PositionReport;
+            buffer.set(mmsi, {
+              mmsi,
+              nombre: existente?.nombre,
+              destino: existente?.destino,
+              tipoBarco: existente?.tipoBarco,
+              lat: pr.Latitude,
+              lon: pr.Longitude,
+              sogKts: pr.Sog,
+              cogGrados: pr.Cog,
+              ultimaActualizacion: Date.now(),
+            });
+          } else if (tipo === "ShipStaticData") {
+            const sd = msg.Message.ShipStaticData;
+            buffer.set(mmsi, {
+              ...existente,
+              mmsi,
+              lat: existente?.lat ?? 0,
+              lon: existente?.lon ?? 0,
+              nombre: sd.Name?.trim(),
+              destino: sd.Destination?.trim(),
+              tipoBarco: sd.Type,
+              ultimaActualizacion: existente?.ultimaActualizacion ?? Date.now(),
+            });
+          }
+        } catch (err) {
+          console.error("[AIS] Error parseando mensaje:", err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error("[AIS] WebSocket error:", err);
+      };
+
+      ws.onclose = (event) => {
+        console.log(`[AIS] WebSocket cerrado (code=${event.code})`);
+        wsRef.current = null;
+        // Si sigue activo y no fue cierre intencional → reconectar
+        if (!cancelled && activo && event.code !== 1000) {
+          scheduleReconnect();
+        }
+      };
+    };
+
     if (!activo) {
+      clearRetry();
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
       setBarcos(new Map());
       bufferRef.current = new Map();
+      retryDelayRef.current = 1000;
       return;
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_AISSTREAM_API_KEY;
-    if (!apiKey) {
-      console.warn(
-        "[AIS] No hay API key. Define EXPO_PUBLIC_AISSTREAM_API_KEY en .env.local",
-      );
-      return;
-    }
-
-    const ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("[AIS] WebSocket conectado");
-      const actual = bboxRef.current;
-      if (actual) ws.send(buildSuscripcion(apiKey, actual));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        const tipo = msg.MessageType;
-        const mmsi = String(msg.MetaData?.MMSI ?? "");
-        if (!mmsi) return;
-
-        const buffer = bufferRef.current;
-        const existente = buffer.get(mmsi);
-        if (tipo === "PositionReport") {
-          const pr = msg.Message.PositionReport;
-          buffer.set(mmsi, {
-            mmsi,
-            nombre: existente?.nombre,
-            destino: existente?.destino,
-            tipoBarco: existente?.tipoBarco,
-            lat: pr.Latitude,
-            lon: pr.Longitude,
-            sogKts: pr.Sog,
-            cogGrados: pr.Cog,
-            ultimaActualizacion: Date.now(),
-          });
-        } else if (tipo === "ShipStaticData") {
-          const sd = msg.Message.ShipStaticData;
-          buffer.set(mmsi, {
-            ...existente,
-            mmsi,
-            lat: existente?.lat ?? 0,
-            lon: existente?.lon ?? 0,
-            nombre: sd.Name?.trim(),
-            destino: sd.Destination?.trim(),
-            tipoBarco: sd.Type,
-            ultimaActualizacion: existente?.ultimaActualizacion ?? Date.now(),
-          });
-        }
-      } catch (err) {
-        console.error("[AIS] Error parseando mensaje:", err);
-      }
-    };
-
-    ws.onerror = (err) => {
-      console.error("[AIS] WebSocket error:", err);
-    };
-
-    ws.onclose = () => {
-      console.log("[AIS] WebSocket cerrado");
-    };
+    // Conexión inicial
+    openConnection();
 
     // Flush periódico del buffer al state (1 vez por segundo).
     const intervalFlush = setInterval(() => {
+      if (cancelled) return;
       const ahora = Date.now();
       const buffer = bufferRef.current;
       const limpio = new Map<string, BarcoAis>();
@@ -150,8 +199,12 @@ export function useAisStream({ activo, bbox }: Props) {
     }, 1000);
 
     return () => {
-      ws.close();
-      wsRef.current = null;
+      cancelled = true;
+      clearRetry();
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
       clearInterval(intervalFlush);
     };
   }, [activo]);

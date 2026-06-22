@@ -28,6 +28,10 @@ type RespuestaMarineGrid = {
   hourly: {
     time: string[];
     wave_height?: number[];
+    wave_period?: number[];
+    wave_direction?: number[];
+    swell_wave_height?: number[];
+    swell_wave_period?: number[];
   };
 };
 
@@ -67,7 +71,8 @@ export async function obtenerPronosticoGrid(
   const paramsMarine = {
     latitude: latitudes,
     longitude: longitudes,
-    hourly: "wave_height",
+    hourly:
+      "wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period",
     timezone: "America/Santiago",
     forecast_days: dias,
   };
@@ -88,14 +93,19 @@ export async function obtenerPronosticoGrid(
   const arrayForecast = Array.isArray(dataForecast) ? dataForecast : [dataForecast];
   const arrayMarine = Array.isArray(dataMarine) ? dataMarine : [dataMarine];
 
+  // BUG FIX: Originalmente se correlacionaba por proximidad geográfica con
+  // Math.abs < 0.05, pero la grilla interna de la Forecast API (~4 km) y la
+  // Marine API (~9 km, 0.0833°) NO se alinean. Las diferencias pueden llegar
+  // a 0.22° (24 km), haciendo que el find() falle y olaMt quede undefined en
+  // varios puntos del grid. Ambas APIs respetan el ORDEN de los puntos del
+  // input, así que correlacionamos por índice.
   const puntos: PronosticoPuntoGrid[] = arrayForecast.map((resp, i) => {
-    // Correlacionar por proximidad geográfica para tolerancia a ligeras diferencias de redondeo del API
-    const respMarine = arrayMarine.find(
-      (m) =>
-        Math.abs(m.latitude - resp.latitude) < 0.05 &&
-        Math.abs(m.longitude - resp.longitude) < 0.05
-    );
+    const respMarine = arrayMarine[i];
     const olas = respMarine?.hourly?.wave_height ?? [];
+    const periodos = respMarine?.hourly?.wave_period ?? [];
+    const dirsOla = respMarine?.hourly?.wave_direction ?? [];
+    const swellH = respMarine?.hourly?.swell_wave_height ?? [];
+    const swellP = respMarine?.hourly?.swell_wave_period ?? [];
 
     return {
       lat: grid[i].lat,
@@ -108,6 +118,10 @@ export async function obtenerPronosticoGrid(
         temperaturaC: resp.hourly.temperature_2m?.[idx] ?? 0,
         probLluvia: resp.hourly.precipitation_probability?.[idx],
         olaMt: olas[idx],
+        olaPeriodoSeg: periodos[idx],
+        olaDireccionGrados: dirsOla[idx],
+        swellMt: swellH[idx],
+        swellPeriodoSeg: swellP[idx],
       })),
     };
   });

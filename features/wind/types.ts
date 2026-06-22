@@ -28,6 +28,14 @@ export type PuntoPronostico = {
   cape?: number;
   /** Altura de ola significativa en metros (marine-api) */
   olaMt?: number;
+  /** Período pico de ola en segundos (marine-api) */
+  olaPeriodoSeg?: number;
+  /** Dirección de donde viene la ola en grados (marine-api) */
+  olaDireccionGrados?: number;
+  /** Altura de swell primario en metros (marine-api) */
+  swellMt?: number;
+  /** Período de swell primario en segundos (marine-api) */
+  swellPeriodoSeg?: number;
 };
 
 export type Pronostico = {

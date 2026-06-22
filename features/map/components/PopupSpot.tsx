@@ -77,7 +77,7 @@ export function PopupSpot({ spot, esActual, punto }: Props) {
             paddingTop: 8,
             borderTop: "1px dashed #e2e8f0",
           }}>
-            {punto.olaMt !== undefined && (
+            {punto.olaMt != null && (
               <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
                 <span style={{ fontSize: 14 }}>🌊</span>
                 <span><strong>{punto.olaMt.toFixed(1)}m</strong> olas</span>

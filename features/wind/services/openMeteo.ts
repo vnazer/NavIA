@@ -48,6 +48,10 @@ type RespuestaMarine = {
   hourly: {
     time: string[];
     wave_height?: number[];
+    wave_period?: number[];
+    wave_direction?: number[];
+    swell_wave_height?: number[];
+    swell_wave_period?: number[];
   };
 };
 
@@ -74,7 +78,8 @@ export async function obtenerPronosticoViento(
   const paramsMarine = {
     latitude: lat,
     longitude: lon,
-    hourly: "wave_height",
+    hourly:
+      "wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period",
     timezone: "America/Santiago",
     forecast_days: dias,
   };
@@ -91,10 +96,12 @@ export async function obtenerPronosticoViento(
   }
 
   const data = resForecast.value.data;
-  const olas =
-    resMarine.status === "fulfilled"
-      ? (resMarine.value.data.hourly?.wave_height ?? [])
-      : [];
+  const m = resMarine.status === "fulfilled" ? resMarine.value.data.hourly : null;
+  const olas = m?.wave_height ?? [];
+  const periodos = m?.wave_period ?? [];
+  const dirsOla = m?.wave_direction ?? [];
+  const swellH = m?.swell_wave_height ?? [];
+  const swellP = m?.swell_wave_period ?? [];
 
   const puntos: PuntoPronostico[] = data.hourly.time.map((hora, i) => ({
     hora,
@@ -110,6 +117,10 @@ export async function obtenerPronosticoViento(
     nubosidad: data.hourly.cloud_cover?.[i],
     cape: data.hourly.cape?.[i],
     olaMt: olas[i],
+    olaPeriodoSeg: periodos[i],
+    olaDireccionGrados: dirsOla[i],
+    swellMt: swellH[i],
+    swellPeriodoSeg: swellP[i],
   }));
 
   return {
