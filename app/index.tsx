@@ -15,7 +15,7 @@ import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapPin, RefreshCw, Map, Play, BookOpen, Settings } from "lucide-react-native";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } from "date-fns/locale/es";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { useColorPorTema } from "@/lib/tema/colores";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";

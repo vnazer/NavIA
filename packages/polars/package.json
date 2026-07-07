@@ -1,0 +1,11 @@
+{
+  "name": "@navia/polars",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Datos polares de ILCA 4/6/7 y funciones de interpolación",
+  "dependencies": {
+    "@navia/shared-types": "*"
+  }
+}

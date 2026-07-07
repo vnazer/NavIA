@@ -4,7 +4,7 @@
 // Web-only: usa estilos inline porque está fuera del MapContainer de Leaflet.
 
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } from "date-fns/locale/es";
 import { beaufortDesdeNudos } from "@/lib/beaufort";
 import { hexDesdeTailwind, colorTextoSobre } from "@/lib/colores";
 import { formatearDireccion } from "@/lib/nautica";

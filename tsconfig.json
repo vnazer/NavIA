@@ -3,9 +3,13 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@navia/shared-types": ["./packages/shared-types/src"],
+      "@navia/shared-types/*": ["./packages/shared-types/src/*"],
+      "@navia/polars": ["./packages/polars/src"],
+      "@navia/polars/*": ["./packages/polars/src/*"],
+      "@navia/nav-utils": ["./packages/nav-utils/src"],
+      "@navia/nav-utils/*": ["./packages/nav-utils/src/*"]
     },
     "module": "esnext",
     "moduleResolution": "node"

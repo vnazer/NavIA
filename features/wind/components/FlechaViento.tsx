@@ -4,7 +4,7 @@
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } from "date-fns/locale/es";
 import { beaufortDesdeNudos } from "@/lib/beaufort";
 import { formatearDireccion } from "@/lib/nautica";
 import { hexDesdeTailwind } from "@/lib/colores";

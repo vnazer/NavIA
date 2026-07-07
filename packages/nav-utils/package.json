@@ -1,0 +1,12 @@
+{
+  "name": "@navia/nav-utils",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Funciones puras de navegación (VMG, laylines, shifts, polar lookup)",
+  "dependencies": {
+    "@navia/shared-types": "*",
+    "@navia/polars": "*"
+  }
+}

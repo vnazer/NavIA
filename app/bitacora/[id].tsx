@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Trash2, Download } from "lucide-react-native";
 import { exportarGpx } from "@/lib/gpx/exportar";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } from "date-fns/locale/es";
 import { useRegataStore } from "@/features/regata/store/useRegataStore";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { SPOTS } from "@/features/spots/data/spots";
