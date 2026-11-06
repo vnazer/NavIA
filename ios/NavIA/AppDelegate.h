@@ -5,3 +5,9 @@
 @interface AppDelegate : EXAppDelegateWrapper
 
 @end
+
+@interface SceneDelegate : UIResponder <UIWindowSceneDelegate>
+
+@property (nonatomic, strong, nullable) UIWindow *window;
+
+@end
