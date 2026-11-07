@@ -40,10 +40,18 @@ EQUIPO_ARG=()
 
 xcodebuild -workspace NavIA.xcworkspace -scheme NavIA -configuration Release \
   -destination "id=$DISPOSITIVO" -derivedDataPath build/dispositivo \
-  -allowProvisioningUpdates "${EQUIPO_ARG[@]}" build | grep -E "error:|warning: .*signing|BUILD (SUCCEEDED|FAILED)" || true
+  -allowProvisioningUpdates "${EQUIPO_ARG[@]}" build > build/ultima-compilacion.log 2>&1 || true
+grep -E "error:|warning: .*signing|BUILD (SUCCEEDED|FAILED)" build/ultima-compilacion.log | head -20 || true
 
 APP=build/dispositivo/Build/Products/Release-iphoneos/NavIA.app
-[ -d "$APP" ] || { echo "La compilación falló; revisa la firma en Xcode (esquema NavIA → Signing)." >&2; exit 1; }
+if ! grep -q "BUILD SUCCEEDED" build/ultima-compilacion.log; then
+  if grep -q "Unable to find a destination" build/ultima-compilacion.log; then
+    echo "El iPhone no está disponible: enchúfalo, desbloquéalo y deja la pantalla encendida." >&2
+  else
+    echo "La compilación falló; detalle en ios/build/ultima-compilacion.log." >&2
+  fi
+  exit 1
+fi
 
 xcrun devicectl device install app --device "$DISPOSITIVO" "$APP"
 echo "Instalada. La app del reloj se instala sola en el Watch enlazado (puede tardar unos minutos)."
