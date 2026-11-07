@@ -75,7 +75,8 @@ final class GPSManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             // posición anterior.
             var velocidad = loc.speed
             var rumbo = loc.course
-            var velocidadFiable = loc.speedAccuracy >= 0 && loc.speedAccuracy < 1.5
+            // Sin `speedAccuracy` (-1) se confía en la velocidad que entrega el chip.
+            var velocidadFiable = loc.speed >= 0 && loc.speedAccuracy < 1.5
             if let previa = ultimaUbicacion, velocidad < 0 || rumbo < 0 {
                 let dt = loc.timestamp.timeIntervalSince(previa.timestamp)
                 if dt >= 0.5 && dt <= 10 {

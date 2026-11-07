@@ -99,8 +99,12 @@ extension SesionManager: HKWorkoutSessionDelegate {
 
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         DispatchQueue.main.async {
-            self.error = "La sesión se detuvo"
+            self.error = "La sesión se detuvo: el reloj puede pausar la app con la muñeca abajo"
+            self.sesion = nil
+            self.builder = nil
+            self.ruta = nil
             self.activa = false
+            self.inicio = nil
         }
     }
 }
