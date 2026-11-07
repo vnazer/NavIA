@@ -7,18 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5A3C8F012FCBF00000000001 /* NavIAWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 5A3C8E8D2FCBE6A5005793FB /* NavIAWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		25AA0092C6A40818F58195F9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DFE9B4C3CE4C80B576F748D1 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		5A3C8F012FCBF00000000001 /* NavIAWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 5A3C8E8D2FCBE6A5005793FB /* NavIAWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5CE0FE09BD81B5D1563939BC /* libPods-NavIA.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 365D41AAA7A3734B07AC46E6 /* libPods-NavIA.a */; };
 		65F265CF63BCCD42BAF00FCC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DFE9B4C3CE4C80B576F748D1 /* PrivacyInfo.xcprivacy */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BAC9C6016A674D8AA24C2577 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2E871CEEA34507A8BA8A26 /* noop-file.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5A3C8F042FCBF00000000004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A3C8E8C2FCBE6A5005793FB;
+			remoteInfo = NavIAWatch;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		5A3C8F022FCBF00000000002 /* Embed Watch Content */ = {
@@ -33,16 +43,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
-
-/* Begin PBXContainerItemProxy section */
-		5A3C8F042FCBF00000000004 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5A3C8E8C2FCBE6A5005793FB;
-			remoteInfo = NavIAWatch;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		018ACCE5128C2694A7D805E4 /* Pods-NavIA.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NavIA.debug.xcconfig"; path = "Target Support Files/Pods-NavIA/Pods-NavIA.debug.xcconfig"; sourceTree = "<group>"; };
