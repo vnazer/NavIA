@@ -58,7 +58,7 @@ struct CronometroView: View {
         .digitalCrownRotation($corona, from: 1, through: 10, by: 1,
                               sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
         .onAppear { corona = Double(crono.minutos) }
-        .onChange(of: corona) { valor in
+        .onChange(of: corona) { _, valor in
             if crono.estado == .detenido { crono.minutos = Int(valor.rounded()) }
         }
     }

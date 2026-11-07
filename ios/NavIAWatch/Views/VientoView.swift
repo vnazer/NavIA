@@ -67,8 +67,8 @@ struct VientoView: View {
         .focusable(true)
         .digitalCrownRotation($corona, from: -100_000, through: 100_000, by: 1,
                               sensitivity: .low, isContinuous: true, isHapticFeedbackEnabled: true)
-        .onChange(of: corona) { [corona] nuevo in
-            let delta = (nuevo - corona).rounded()
+        .onChange(of: corona) { anterior, nuevo in
+            let delta = (nuevo - anterior).rounded()
             if delta != 0 { tactica.ajustarReferencia(delta) }
         }
     }
