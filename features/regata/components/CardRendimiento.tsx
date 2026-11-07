@@ -68,11 +68,13 @@ export function CardRendimiento({ rendimiento, tws }: Props) {
             <View className="flex-row gap-2">
               {rendimiento.vmg !== undefined && (
                 <View className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700">
+                  {/* VMG con signo: |VMG| + flecha (↑ barlovento / ↓ sotavento) */}
                   <Text className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-                    VMG al Viento
+                    {rendimiento.vmg >= 0 ? "VMG ↑ barlovento" : "VMG ↓ sotavento"}
                   </Text>
                   <Text className="mt-1 text-lg font-extrabold text-slate-900 dark:text-white">
-                    ⛵ {rendimiento.vmg.toFixed(1)} kt
+                    ⛵ {rendimiento.vmg >= 0 ? "↑" : "↓"}
+                    {Math.abs(rendimiento.vmg).toFixed(1)} kt
                   </Text>
                 </View>
               )}

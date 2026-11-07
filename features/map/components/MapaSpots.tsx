@@ -4,11 +4,12 @@
 import { useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import MapView, { UrlTile, Marker, Polyline } from "react-native-maps";
-import { Wind, MapPin } from "lucide-react-native";
+import { MapPin } from "lucide-react-native";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { SPOTS } from "@/features/spots/data/spots";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
+import { useVientoActual } from "@/features/wind/lib/vientoActual";
 import { MAPA_CONFIG, TILES_NATIVO } from "../data/config";
 import { ModalAgregarBoya } from "@/features/boyas/components/ModalAgregarBoya";
 import { BOYA_META, type TipoBoya } from "@/features/boyas/types";
@@ -152,7 +153,7 @@ function CardVientoSpotNativo({
         </Text>
       </View>
 
-      <Text style={{ fontFamily: "Inter-SemiBold", fontSize: 12, color: "#FFFFFF", marginTop: 2 }}>
+      <Text style={{ fontFamily: "Inter-Medium", fontSize: 12, color: "#FFFFFF", marginTop: 2 }}>
         {formatearDireccion(punto.direccionGrados)} · Fuerza {beaufort.fuerza}
       </Text>
 
@@ -243,14 +244,8 @@ export function MapaSpots() {
     return { committee, pin };
   }, [modoTactico, committeeId, pinId, boyas]);
 
-  const puntoSpotAhora = useMemo(() => {
-    if (!pronosticoSpot?.puntos.length) return null;
-    const ahoraTs = Date.now() - 60 * 60 * 1000;
-    const idx = pronosticoSpot.puntos.findIndex(
-      (p) => new Date(p.hora).getTime() >= ahoraTs,
-    );
-    return pronosticoSpot.puntos[idx === -1 ? 0 : idx] ?? null;
-  }, [pronosticoSpot]);
+  // Hora del pronóstico más cercana a ahora (mismo criterio en toda la app)
+  const puntoSpotAhora = useVientoActual(pronosticoSpot);
 
   const handleLongPress = (lat: number, lon: number) => {
     setCoordsPendientes({ lat, lon });
@@ -273,14 +268,19 @@ export function MapaSpots() {
           handleLongPress(latitude, longitude);
         }}
       >
+        {/* shouldReplaceMapContent: en iOS mapType="none" no existe; así OSM
+            reemplaza el mapa de Apple (sin etiquetas duplicadas) */}
         <UrlTile
           urlTemplate={TILES_NATIVO.base}
           maximumZ={19}
           zIndex={1}
+          shouldReplaceMapContent
         />
+        {/* OpenSeaMap solo renderiza desde zoom 12 (debajo: placeholder) */}
         {seamarkVisible && (
           <UrlTile
             urlTemplate={TILES_NATIVO.seamark}
+            minimumZ={12}
             maximumZ={19}
             zIndex={2}
           />
@@ -359,52 +359,41 @@ export function MapaSpots() {
         </Text>
       </Pressable>
 
+      {/* Aviso debajo del botón "Cartas" (antes quedaba encima de él) */}
       {boyas.length === 0 && (
         <View
+          pointerEvents="none"
           style={{
             position: "absolute",
-            top: 16,
-            alignSelf: "center",
-            backgroundColor: "rgba(15, 23, 42, 0.88)",
-            paddingHorizontal: 14,
-            paddingVertical: 8,
+            top: 76,
+            left: 16,
+            right: 16,
+            alignItems: "center",
           }}
         >
-          <Text
+          <View
             style={{
-              fontFamily: "Inter-Regular",
-              fontSize: 12,
-              color: "#FFFFFF",
+              backgroundColor: "rgba(15, 23, 42, 0.88)",
+              paddingHorizontal: 14,
+              paddingVertical: 8,
             }}
           >
-            Mantén presionado el mapa para marcar una boya
-          </Text>
+            <Text
+              style={{
+                fontFamily: "Inter-Regular",
+                fontSize: 12,
+                color: "#FFFFFF",
+              }}
+            >
+              Mantén presionado el mapa para marcar una boya
+            </Text>
+          </View>
         </View>
       )}
 
       <CardVientoSpotNativo spot={spotActual} punto={puntoSpotAhora} />
 
-      <View
-        style={{
-          position: "absolute",
-          top: 72,
-          right: 16,
-          backgroundColor: c.surface,
-          borderWidth: 1,
-          borderColor: c.border,
-          padding: 10,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          opacity: 0.85,
-        }}
-      >
-        <Wind size={14} color={c.text3} />
-        <Text style={{ fontFamily: "Inter-Regular", fontSize: 11, color: c.text3 }}>
-          Capa viento: solo web
-        </Text>
-      </View>
-
+      {/* El aviso "Capa viento: solo web" se omite en nativo (tapaba "Cartas") */}
       <ModalAgregarBoya
         lat={coordsPendientes?.lat ?? 0}
         lon={coordsPendientes?.lon ?? 0}

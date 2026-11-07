@@ -30,7 +30,7 @@ export default function PantallaBitacora() {
               Aún no hay sesiones grabadas
             </Text>
             <Text className="text-center text-sm text-slate-500 dark:text-slate-400">
-              Iniciá una regata desde la pantalla principal para empezar a
+              Inicia una regata desde la pantalla principal para empezar a
               registrar tus salidas.
             </Text>
           </View>

@@ -1,9 +1,10 @@
 // Pantalla de regata activa: inicia tracking GPS, muestra SOG/COG en vivo
 // y rendimiento vs polar según viento del spot.
 
-import { useMemo, useCallback, useEffect, useRef, useState } from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
-import { Link, useRouter } from "expo-router";
+import { useMemo, useCallback, useEffect, useState } from "react";
+import { ScrollView, View, Text, Pressable, Alert, Platform } from "react-native";
+import { Link, useFocusEffect, useRouter } from "expo-router";
+import { useKeepAwake } from "expo-keep-awake";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
@@ -20,6 +21,7 @@ import { useBarcoStore } from "@/features/polar/store/useBarcoStore";
 import { useRegataStore } from "@/features/regata/store/useRegataStore";
 import { useTrackingGPS } from "@/features/regata/hooks/useTrackingGPS";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
+import { useVientoActual } from "@/features/wind/lib/vientoActual";
 import { calcularRendimiento } from "@/features/regata/lib/calculosNavegacion";
 import { CardRendimiento } from "@/features/regata/components/CardRendimiento";
 import { PanelShifts } from "@/features/regata/components/PanelShifts";
@@ -38,7 +40,19 @@ import { useCopilotoStore } from "@/features/regata/store/useCopilotoStore";
 import { WetScreenLock } from "@/features/ui/components/WetScreenLock";
 
 export default function PantallaRegata() {
+  // Pantalla encendida mientras esta pantalla está montada: si iOS bloquea la
+  // pantalla, el GPS en primer plano se detiene y la sesión pierde puntos.
+  useKeepAwake("navia-regata", { suppressDeactivateWarnings: true });
   const router = useRouter();
+  // Foco: si /tactica está encima, esta pantalla sigue montada (y grabando),
+  // pero el copiloto solo lo procesa la pantalla visible.
+  const [enFoco, setEnFoco] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setEnFoco(true);
+      return () => setEnFoco(false);
+    }, []),
+  );
   const barco = useBarcoStore((s) => s.getBarcoActual());
   const [screenLockActivo, setScreenLockActivo] = useState(false);
   const colorIconoClaro = useColorPorTema("#334155", "#e2e8f0");
@@ -58,27 +72,26 @@ export default function PantallaRegata() {
 
   const { pronostico } = usePronosticoViento();
   // pronostico también se pasa to PanelShifts para histórico de shifts
-  const sesion = useRegataStore((s) => s.sesionActiva);
+  // Selectores finos: sesionActiva cambia de referencia con cada punto GPS;
+  // así esta pantalla no depende del objeto completo.
+  const sesionId = useRegataStore((s) => s.sesionActiva?.id ?? null);
+  const sesionNombre = useRegataStore((s) => s.sesionActiva?.nombre ?? "");
+  const sesionFechaInicio = useRegataStore((s) => s.sesionActiva?.fechaInicio ?? null);
+  const sesionCantidadPuntos = useRegataStore((s) => s.sesionActiva?.puntos.length ?? 0);
+  const boyasSesion = useRegataStore((s) => s.sesionActiva?.boyasSnapshot ?? null);
   const iniciarSesion = useRegataStore((s) => s.iniciarSesion);
   const terminarSesion = useRegataStore((s) => s.terminarSesion);
   const agregarPunto = useRegataStore((s) => s.agregarPunto);
   // Boyas race-day (store global, no por spot). Si hay sesión activa,
-  // mostramos el snapshot que se guardó al iniciarla; sino, las del store.
+  // mostramos su snapshot (que se mantiene sincronizado con las ediciones
+  // hechas en /boyas, /mapa o /tactica); sino, las del store.
   const boyasGlobales = useBoyasStore((s) => s.boyas);
-  const boyasActivas = sesion?.boyasSnapshot ?? boyasGlobales;
+  const boyasActivas = boyasSesion ?? boyasGlobales;
 
-  // Viento del momento (primer punto futuro del pronóstico)
-  const vientoActual = useMemo(() => {
-    if (!pronostico) return null;
-    const ahora = Date.now();
-    return (
-      pronostico.puntos.find((p) => new Date(p.hora).getTime() >= ahora) ??
-      pronostico.puntos[0] ??
-      null
-    );
-  }, [pronostico]);
+  // Viento del momento: hora del pronóstico más cercana a ahora (se recalcula)
+  const vientoActual = useVientoActual(pronostico);
 
-  const trackingActivo = sesion != null;
+  const trackingActivo = sesionId != null;
   const { permiso, ultimoPunto, error } = useTrackingGPS({
     activo: trackingActivo,
     onPunto: agregarPunto,
@@ -104,19 +117,22 @@ export default function PantallaRegata() {
     );
   }, [ultimoPunto, vientoActual, barco.polar, waypointActivo]);
 
-  // Procesar Telemetría con NavIA Copilot
+  // Procesar Telemetría con NavIA Copilot (solo si esta pantalla está en foco,
+  // para no procesar/anunciar doble cuando /tactica está montada encima)
   const procesarTelemetria = useCopilotoStore((s) => s.procesarTelemetria);
+  const esIlca = barco.id.startsWith("ilca");
   useEffect(() => {
-    if (trackingActivo && vientoActual) {
-      procesarTelemetria(
+    if (enFoco && trackingActivo && vientoActual) {
+      procesarTelemetria({
         rendimiento,
-        vientoActual.velocidadNudos,
-        vientoActual.direccionGrados,
-        1.2, // Olas estimadas del spot
-        ultimoPunto?.cogGrados ?? 0
-      );
+        tws: vientoActual.velocidadNudos,
+        twd: vientoActual.direccionGrados,
+        olasMt: vientoActual.olaMt ?? null, // ola real del pronóstico (si existe)
+        cog: ultimoPunto?.cogGrados ?? null,
+        esIlca,
+      });
     }
-  }, [rendimiento, vientoActual, ultimoPunto, trackingActivo, procesarTelemetria]);
+  }, [rendimiento, vientoActual, ultimoPunto, trackingActivo, procesarTelemetria, enFoco, esIlca]);
 
   const handleIniciar = useCallback(() => {
     iniciarSesion({
@@ -128,9 +144,32 @@ export default function PantallaRegata() {
     });
   }, [iniciarSesion, barco.id, spot.id, vientoActual, boyasGlobales]);
 
-  const posBarco = ultimoPunto
-    ? { lat: ultimoPunto.lat, lon: ultimoPunto.lon, cog: ultimoPunto.cogGrados }
-    : null;
+  const handleFinalizar = useCallback(() => {
+    const titulo = "¿Finalizar regata?";
+    const mensaje = "Se detiene el tracking GPS y la sesión se guarda en la bitácora.";
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(`${titulo}\n\n${mensaje}`)) {
+        terminarSesion();
+      }
+      return;
+    }
+    Alert.alert(titulo, mensaje, [
+      { text: "Seguir navegando", style: "cancel" },
+      { text: "Finalizar y guardar", style: "destructive", onPress: terminarSesion },
+    ]);
+  }, [terminarSesion]);
+
+  // Memo con dependencias primitivas: el mapa recibe una referencia estable
+  const latBarco = ultimoPunto?.lat ?? null;
+  const lonBarco = ultimoPunto?.lon ?? null;
+  const cogBarco = ultimoPunto?.cogGrados ?? null;
+  const posBarco = useMemo(
+    () =>
+      latBarco != null && lonBarco != null
+        ? { lat: latBarco, lon: lonBarco, cog: cogBarco ?? undefined }
+        : null,
+    [latBarco, lonBarco, cogBarco],
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -236,16 +275,16 @@ export default function PantallaRegata() {
                 boyas={boyasActivas}
                 posBarco={posBarco}
               />
-              {sesion && (
+              {trackingActivo && (
                 <Text className="text-xs text-slate-500 dark:text-slate-400">
-                  Editando snapshot de la sesión activa — no afecta las
-                  predeterminadas del spot.
+                  Los cambios que hagas en las boyas se aplican también a la
+                  sesión activa.
                 </Text>
               )}
             </>
           ) : (
             <Text className="text-sm text-slate-500 dark:text-slate-400">
-              No hay boyas cargadas. Tap &quot;Editar&quot; para pegar las
+              No hay boyas cargadas. Toca &quot;Editar&quot; para pegar las
               coordenadas que envió el juez.
             </Text>
           )}
@@ -274,7 +313,7 @@ export default function PantallaRegata() {
           </Pressable>
         ) : (
           <Pressable
-            onPress={terminarSesion}
+            onPress={handleFinalizar}
             className="flex-row items-center justify-center gap-2 rounded-xl bg-red-600 p-4"
           >
             <Square size={18} color="white" />
@@ -313,7 +352,9 @@ export default function PantallaRegata() {
                 <View className="flex-1 rounded-lg bg-mar-50 dark:bg-mar-900 p-3">
                   <Text className="text-xs uppercase text-mar-700 dark:text-mar-100">COG</Text>
                   <Text className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                    {Math.round(ultimoPunto.cogGrados)}°
+                    {ultimoPunto.cogGrados != null
+                      ? `${Math.round(ultimoPunto.cogGrados)}°`
+                      : "—"}
                   </Text>
                   <Text className="text-xs text-slate-600 dark:text-slate-300">rumbo</Text>
                 </View>
@@ -343,28 +384,28 @@ export default function PantallaRegata() {
         {pronostico && (
           <PanelShifts
             pronostico={pronostico}
-            sesionFechaInicio={sesion?.fechaInicio ?? null}
+            sesionFechaInicio={sesionFechaInicio}
             twdActual={vientoActual?.direccionGrados ?? null}
           />
         )}
 
         {/* Resumen de la sesión activa */}
-        {sesion && (
+        {trackingActivo && sesionFechaInicio != null && (
           <View className="rounded-xl bg-white dark:bg-slate-800 p-4 shadow-sm">
             <Text className="text-xs uppercase text-slate-500 dark:text-slate-400">Sesión</Text>
             <Text className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-              {sesion.nombre}
+              {sesionNombre}
             </Text>
             <Text className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-              {sesion.puntos.length} puntos GPS registrados ·{" "}
-              {duracionMinutos(sesion.fechaInicio)} min
+              {sesionCantidadPuntos} puntos GPS registrados ·{" "}
+              {duracionMinutos(sesionFechaInicio)} min
             </Text>
           </View>
         )}
 
         {!trackingActivo && (
           <Text className="px-4 text-center text-xs text-slate-500 dark:text-slate-400">
-            Iniciá una regata para registrar tu tracking GPS y comparar tu
+            Inicia una regata para registrar tu tracking GPS y comparar tu
             performance contra el polar del barco en tiempo real.
           </Text>
         )}
@@ -375,7 +416,7 @@ export default function PantallaRegata() {
         activo={screenLockActivo}
         onDesbloquear={() => setScreenLockActivo(false)}
         sog={ultimoPunto?.sogKts ?? 0}
-        cog={ultimoPunto?.cogGrados ?? 0}
+        cog={ultimoPunto?.cogGrados ?? null}
         vmg={rendimiento?.vmg}
         vmc={rendimiento?.vmc}
         distanciaBoya={rendimiento?.distanciaToWaypoint}

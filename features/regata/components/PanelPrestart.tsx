@@ -16,9 +16,11 @@ import {
 type Props = {
   vientoGrados: number;
   segundosAlStart: number;
+  /** Si el race timer está apagado no hay "al start" contra qué medir. */
+  timerActivo: boolean;
 };
 
-export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
+export function PanelPrestart({ vientoGrados, segundosAlStart, timerActivo }: Props) {
   const limpiar = useTacticaStore((s) => s.limpiarLineaSalida);
   const committeeId = useTacticaStore((s) => s.boyaCommitteeId);
   const pinId = useTacticaStore((s) => s.boyaPinId);
@@ -31,7 +33,7 @@ export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
     return (
       <View className="rounded-xl border border-amber-200 bg-amber-50 p-4">
         <Text className="text-amber-800">
-          Falta committee o pin. Reconfigurá la línea.
+          Falta committee o pin. Vuelve a configurar la línea.
         </Text>
         <Pressable onPress={limpiar} className="mt-2">
           <Text className="text-sm font-semibold text-amber-900">
@@ -62,11 +64,11 @@ export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
     vientoGrados,
   );
 
-  const ttb = calcularTimeToBurn(
-    dtl.distanciaMt,
-    ultimoPunto?.sogKts ?? 0,
-    segundosAlStart,
-  );
+  // Sin cronómetro, segundosAlStart es 0 y el TTB saldría siempre negativo
+  // ("vas a llegar tarde"): no lo calculamos.
+  const ttb = timerActivo
+    ? calcularTimeToBurn(dtl.distanciaMt, ultimoPunto?.sogKts ?? 0, segundosAlStart)
+    : null;
 
   const colorTtb =
     ttb == null
@@ -79,15 +81,16 @@ export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
             ? "#fef3c7"
             : "#fee2e2";
 
-  const textoTtb =
-    ttb == null
-      ? "Necesitás más SOG"
+  const textoTtb = !timerActivo
+    ? "Inicia el race timer para calcular el time to burn"
+    : ttb == null
+      ? "Necesitas más SOG"
       : ttb < -2
-        ? "Vas a llegar tarde — acelerá"
+        ? "Vas a llegar tarde — acelera"
         : ttb < 5
           ? "Timing perfecto"
           : ttb < 15
-            ? "Demasiado rápido — frená"
+            ? "Demasiado rápido — frena"
             : "Muy lejos o muy lento";
 
   return (
@@ -105,7 +108,7 @@ export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
       {!ultimoPunto && (
         <View className="rounded-lg border border-slate-200 bg-slate-50 p-3">
           <Text className="text-sm text-slate-600">
-            Iniciá el tracking GPS en /regata para ver distance-to-line.
+            Inicia el tracking GPS en Regata para ver la distancia a la línea.
           </Text>
         </View>
       )}
@@ -115,7 +118,7 @@ export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
         <View className="flex-row items-center gap-2 rounded-lg border border-red-300 bg-red-100 p-3">
           <AlertTriangle size={18} color="#dc2626" />
           <Text className="flex-1 font-semibold text-red-800">
-            OCS — cruzaste la línea, regresá ya
+            OCS — cruzaste la línea, regresa ya
           </Text>
         </View>
       )}
@@ -184,7 +187,7 @@ export function PanelPrestart({ vientoGrados, segundosAlStart }: Props) {
         <View className="flex-1 items-center rounded-lg bg-slate-50 p-2">
           <Text className="text-xs text-slate-500">Al start</Text>
           <Text className="text-lg font-bold text-slate-900">
-            {Math.max(0, Math.round(segundosAlStart))}s
+            {timerActivo ? `${Math.max(0, Math.round(segundosAlStart))}s` : "—"}
           </Text>
         </View>
       </View>

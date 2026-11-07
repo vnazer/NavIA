@@ -77,7 +77,8 @@ export function VisualizadorPolar({
   const generarCurvaSimetrica = (tws: number, lado: 1 | -1): string => {
     const puntos: string[] = [];
     for (let twa = 0; twa <= 180; twa += 5) {
-      const bsp = consultarPolar(polar, tws, twa);
+      // Bajo el TWA mínimo del polar (zona muerta) la curva va al centro
+      const bsp = consultarPolar(polar, tws, twa, { ceroBajoMinimo: true });
       const [x, y] = polarAXY(twa, bsp, centro, escala);
       const xFinal = lado === 1 ? x : 2 * centro - x;
       puntos.push(`${xFinal.toFixed(1)},${y.toFixed(1)}`);
@@ -111,7 +112,7 @@ export function VisualizadorPolar({
             y={centro - bsp * escala + 4}
             fontSize={10}
             fill="#94a3b8"
-            fontFamily="system-ui"
+            fontFamily="Inter-Regular"
           >
             {bsp} kt
           </SvgText>
@@ -138,7 +139,7 @@ export function VisualizadorPolar({
               fontSize={11}
               fill="#475569"
               textAnchor="middle"
-              fontFamily="system-ui"
+              fontFamily="Inter-Regular"
               fontWeight="600"
             >
               {twa}°
@@ -160,7 +161,7 @@ export function VisualizadorPolar({
                   fontSize={11}
                   fill="#475569"
                   textAnchor="middle"
-                  fontFamily="system-ui"
+                  fontFamily="Inter-Regular"
                   fontWeight="600"
                 >
                   {twa}°
@@ -178,7 +179,7 @@ export function VisualizadorPolar({
         fontSize={11}
         fill="#0a4d7a"
         textAnchor="middle"
-        fontFamily="system-ui"
+        fontFamily="Inter-Regular"
         fontWeight="700"
       >
         ↑ VIENTO

@@ -33,7 +33,7 @@ export function PanelWaypoint() {
     return (
       <View className="items-center rounded-2xl bg-white p-6">
         <Text className="text-slate-500">
-          Esperando GPS — andá a /regata e iniciá tracking.
+          Esperando GPS — ve a Regata e inicia el tracking.
         </Text>
         <Pressable onPress={desactivar} className="mt-3 p-2">
           <Text className="text-sm font-semibold text-slate-600">Cancelar</Text>
@@ -49,11 +49,11 @@ export function PanelWaypoint() {
     boya.lon,
   );
 
-  // Diferencia entre tu COG y el bearing hacia la marca (signed: + = girar a derecha)
+  // Diferencia entre tu COG y el bearing hacia la marca (signed: + = girar a derecha).
+  // COG null = sin rumbo válido (0° es un rumbo real: norte).
+  const cog = ultimoPunto.cogGrados;
   const diferenciaCog =
-    ultimoPunto.cogGrados > 0
-      ? ((bearingGrados - ultimoPunto.cogGrados + 540) % 360) - 180
-      : null;
+    cog != null ? ((bearingGrados - cog + 540) % 360) - 180 : null;
 
   const etaSegundos =
     ultimoPunto.sogKts > 0.3 ? distanciaMt / (ultimoPunto.sogKts * 0.5144) : null;
@@ -103,9 +103,7 @@ export function PanelWaypoint() {
         <View className="flex-1 rounded-lg bg-slate-50 p-3">
           <Text className="text-xs uppercase text-slate-500">Tu COG</Text>
           <Text className="text-xl font-bold text-slate-900">
-            {ultimoPunto.cogGrados > 0
-              ? `${ultimoPunto.cogGrados.toFixed(0)}°`
-              : "—"}
+            {cog != null ? `${cog.toFixed(0)}°` : "—"}
           </Text>
         </View>
         <View

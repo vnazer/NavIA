@@ -8,6 +8,7 @@
 
 import axios from "axios";
 import type { Pronostico, PuntoPronostico } from "../types";
+import { rachaAlineada } from "../lib/vientoActual";
 
 const BASE_URL = "https://api.open-meteo.com/v1/forecast";
 const MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
@@ -106,7 +107,8 @@ export async function obtenerPronosticoViento(
   const puntos: PuntoPronostico[] = data.hourly.time.map((hora, i) => ({
     hora,
     velocidadNudos: data.hourly.wind_speed_10m[i],
-    rachasNudos: data.hourly.wind_gusts_10m[i],
+    // wind_gusts_10m es el máximo de la hora PRECEDENTE: alinear con la hora H
+    rachasNudos: rachaAlineada(data.hourly.wind_gusts_10m, data.hourly.wind_speed_10m, i),
     direccionGrados: data.hourly.wind_direction_10m[i],
     temperaturaC: data.hourly.temperature_2m[i],
     presionHpa: data.hourly.pressure_msl?.[i],

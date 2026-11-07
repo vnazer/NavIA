@@ -1,5 +1,6 @@
-// Panel de shifts de viento: muestra el giro acumulado desde el inicio
-// de la sesión y la historia de shifts detectados en el pronóstico.
+// Panel de shifts de viento: muestra la TENDENCIA DEL PRONÓSTICO desde el
+// inicio de la sesión (no es viento medido: no hay sensor de viento) y la
+// historia de shifts detectados en el pronóstico.
 // Componente nativo (funciona en iOS, Android y Web).
 
 import { useMemo } from "react";
@@ -84,7 +85,7 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
       {shiftActualInfo ? (
         <View className="mb-3 rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
           <Text className="mb-1 text-xs uppercase text-slate-500 dark:text-slate-400">
-            Cambio desde inicio de sesión
+            Tendencia del pronóstico desde el inicio
           </Text>
           <View className="flex-row items-center gap-2">
             <IconoTendencia t={shiftActualInfo.tendencia} size={18} />
@@ -112,13 +113,14 @@ export function PanelShifts({ pronostico, sesionFechaInicio, twdActual }: Props)
           )}
           {baseline != null && twdActual != null && (
             <Text className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-              Base {Math.round(baseline)}° → Ahora {Math.round(twdActual)}°
+              Pronóstico: {Math.round(baseline)}° al inicio → {Math.round(twdActual)}° ahora
+              (no medido)
             </Text>
           )}
         </View>
       ) : (
         <Text className="mb-3 text-xs text-slate-400 dark:text-slate-500">
-          Iniciá una sesión para ver el shift vs baseline.
+          Inicia una sesión para ver la tendencia del pronóstico.
         </Text>
       )}
 

@@ -2,9 +2,10 @@
 // Muestra race timer, viento usado, y el modo activo (waypoint o prestart)
 // o el selector si no hay ninguno.
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ScrollView, View, Text, Pressable } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useKeepAwake } from "expo-keep-awake";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Compass, Flag, Wind } from "lucide-react-native";
 import { useTacticaStore } from "@/features/regata/store/useTacticaStore";
@@ -12,6 +13,7 @@ import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
 import { useGpsStore } from "@/features/regata/store/useGpsStore";
 import { useRegataStore } from "@/features/regata/store/useRegataStore";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
+import { useVientoActual } from "@/features/wind/lib/vientoActual";
 import { useRaceTimer } from "@/features/race-timer/hooks/useRaceTimer";
 import { RaceTimerWidget } from "@/features/race-timer/components/RaceTimerWidget";
 import { PanelWaypoint } from "@/features/regata/components/PanelWaypoint";
@@ -31,7 +33,19 @@ import { WetScreenLock } from "@/features/ui/components/WetScreenLock";
 import { decir } from "@/lib/voz/servicio";
 
 export default function PantallaTactica() {
+  // Pantalla encendida mientras se usa el modo táctico (evita que iOS
+  // bloquee la pantalla y detenga el GPS en primer plano)
+  useKeepAwake("navia-tactica", { suppressDeactivateWarnings: true });
   const router = useRouter();
+  // El copiloto solo lo procesa la pantalla en foco (regata puede seguir
+  // montada debajo; así no se procesa ni se anuncia doble)
+  const [enFoco, setEnFoco] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setEnFoco(true);
+      return () => setEnFoco(false);
+    }, []),
+  );
   const modoActivo = useTacticaStore((s) => s.modoActivo);
   const [screenLockActivo, setScreenLockActivo] = useState(false);
   const activarWaypoint = useTacticaStore((s) => s.activarWaypoint);
@@ -42,28 +56,23 @@ export default function PantallaTactica() {
 
   const boyas = useBoyasStore((s) => s.boyas);
   const ultimoPunto = useGpsStore((s) => s.ultimoPunto);
-  const sesion = useRegataStore((s) => s.sesionActiva);
+  // Selectores finos (sesionActiva cambia con cada punto GPS)
+  const haySesion = useRegataStore((s) => s.sesionActiva != null);
+  const vientoSnapshot = useRegataStore((s) => s.sesionActiva?.vientoSnapshot ?? null);
   const { pronostico } = usePronosticoViento();
   const { tiempoRestanteMs, activo: timerActivo } = useRaceTimer();
 
   // El viento usado para cálculos: override > snapshot de sesión > pronóstico
-  const vientoActual = useMemo(() => {
-    if (!pronostico) return null;
-    const ahora = Date.now();
-    return (
-      pronostico.puntos.find((p) => new Date(p.hora).getTime() >= ahora) ??
-      pronostico.puntos[0] ??
-      null
-    );
-  }, [pronostico]);
+  // (hora más cercana a ahora, recalculada periódicamente)
+  const vientoActual = useVientoActual(pronostico);
 
   const vientoGrados =
     vientoOverride ??
-    sesion?.vientoSnapshot?.direccionGrados ??
+    vientoSnapshot?.direccionGrados ??
     vientoActual?.direccionGrados ??
     270;
   const vientoKts =
-    sesion?.vientoSnapshot?.velocidadNudos ??
+    vientoSnapshot?.velocidadNudos ??
     vientoActual?.velocidadNudos ??
     10;
 
@@ -88,19 +97,23 @@ export default function PantallaTactica() {
   }, [ultimoPunto, vientoGrados, vientoKts, barco.polar, waypointActivo]);
 
   const procesarTelemetria = useCopilotoStore((s) => s.procesarTelemetria);
-  const trackingActivo = sesion != null;
+  const trackingActivo = haySesion;
+  const esIlca = barco.id.startsWith("ilca");
+  // Ola: dato real del pronóstico (si no hay, la regla de olas no se aplica)
+  const olasMt = vientoActual?.olaMt ?? null;
 
   useEffect(() => {
-    if (trackingActivo) {
-      procesarTelemetria(
+    if (enFoco && trackingActivo) {
+      procesarTelemetria({
         rendimiento,
-        vientoKts,
-        vientoGrados,
-        1.2, // Olas default
-        ultimoPunto?.cogGrados ?? 0
-      );
+        tws: vientoKts,
+        twd: vientoGrados,
+        olasMt,
+        cog: ultimoPunto?.cogGrados ?? null,
+        esIlca,
+      });
     }
-  }, [rendimiento, vientoKts, vientoGrados, ultimoPunto, trackingActivo, procesarTelemetria]);
+  }, [rendimiento, vientoKts, vientoGrados, ultimoPunto, trackingActivo, procesarTelemetria, enFoco, olasMt, esIlca]);
 
   // Segundos al start (positivo = falta; negativo = ya pasó)
   const segundosAlStart = timerActivo ? Math.max(0, tiempoRestanteMs / 1000) : 0;
@@ -193,8 +206,8 @@ export default function PantallaTactica() {
         {!ultimoPunto && (
           <View className="flex-row items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <Text className="flex-1 text-sm text-amber-900">
-              Sin tracking GPS activo. Para datos en vivo, andá a Regata e
-              iniciá la sesión.
+              Sin tracking GPS activo. Para datos en vivo, ve a Regata e
+              inicia la sesión.
             </Text>
           </View>
         )}
@@ -207,8 +220,8 @@ export default function PantallaTactica() {
               Sin boyas marcadas
             </Text>
             <Text className="text-center text-xs text-slate-500 dark:text-slate-400">
-              Andá al mapa y marcá al menos una boya (click derecho) para
-              activar el modo táctico.
+              Ve al mapa y marca al menos una boya (mantén presionado el
+              mapa) para activar el modo táctico.
             </Text>
           </View>
         )}
@@ -221,6 +234,7 @@ export default function PantallaTactica() {
           <PanelPrestart
             vientoGrados={vientoGrados}
             segundosAlStart={segundosAlStart}
+            timerActivo={timerActivo}
           />
         )}
 
@@ -266,7 +280,7 @@ export default function PantallaTactica() {
         activo={screenLockActivo}
         onDesbloquear={() => setScreenLockActivo(false)}
         sog={ultimoPunto?.sogKts ?? 0}
-        cog={ultimoPunto?.cogGrados ?? 0}
+        cog={ultimoPunto?.cogGrados ?? null}
         vmg={rendimiento?.vmg}
         vmc={rendimiento?.vmc}
         distanciaBoya={rendimiento?.distanciaToWaypoint}

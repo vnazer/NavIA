@@ -132,7 +132,7 @@ export function TarjetaAtmosfera({ punto, proximas3hr }: Props) {
         <View className="rounded-lg border border-amber-200 bg-amber-50 p-2">
           <Text className="text-xs text-amber-800">
             ⚠️ Caída de presión {caidaPresion.toFixed(1)} hPa en 3hr — posible
-            frente o tormenta. Revisá pronóstico extendido.
+            frente o tormenta. Revisa el pronóstico extendido.
           </Text>
         </View>
       )}

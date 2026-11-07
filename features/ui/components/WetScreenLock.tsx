@@ -8,7 +8,9 @@ type Props = {
   activo: boolean;
   onDesbloquear: () => void;
   sog: number;
-  cog: number;
+  /** COG en grados; null si no hay rumbo válido. */
+  cog: number | null;
+  /** VMG con signo: + hacia barlovento, − hacia sotavento. */
   vmg?: number;
   vmc?: number;
   distanciaBoya?: number;
@@ -112,16 +114,19 @@ export function WetScreenLock({
         <View style={[styles.card, { borderColor: "#00FFE0" }]}>
           <Text style={styles.label}>COG (RUMBO)</Text>
           <Text style={[styles.valorGigante, { color: "#00FFE0" }]}>
-            {Math.round(cog)}°
+            {cog != null ? `${Math.round(cog)}°` : "—"}
           </Text>
           <Text style={styles.sublabel}>GRADOS</Text>
         </View>
 
-        {/* VMG al Viento */}
-        <View style={[styles.card, { borderColor: vmg && vmg >= 0 ? "#2EF07A" : "#dc2626" }]}>
-          <Text style={styles.label}>VMG AL VIENTO</Text>
-          <Text style={[styles.valorGigante, { color: vmg && vmg >= 0 ? "#2EF07A" : "#dc2626" }]}>
-            {vmg != null ? vmg.toFixed(1) : "—"}
+        {/* VMG: en popa el VMG es negativo por definición (hacia sotavento);
+            no es un error, así que mostramos el valor absoluto con flecha. */}
+        <View style={[styles.card, { borderColor: "#2EF07A" }]}>
+          <Text style={styles.label}>
+            {vmg == null ? "VMG" : vmg >= 0 ? "VMG ↑ BARLOVENTO" : "VMG ↓ SOTAVENTO"}
+          </Text>
+          <Text style={[styles.valorGigante, { color: "#2EF07A" }]}>
+            {vmg != null ? `${vmg >= 0 ? "↑" : "↓"}${Math.abs(vmg).toFixed(1)}` : "—"}
           </Text>
           <Text style={styles.sublabel}>NUDOS</Text>
         </View>
@@ -264,7 +269,7 @@ const styles = StyleSheet.create({
   },
   valorGigante: {
     fontSize: 60,
-    fontFamily: "Inter-ExtraBold",
+    fontFamily: "Inter-Bold",
     textAlign: "center",
     lineHeight: 64,
   },

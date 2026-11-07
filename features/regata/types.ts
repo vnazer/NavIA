@@ -10,8 +10,10 @@ export type PuntoTrack = {
   lon: number;
   /** Velocidad sobre fondo en nudos (Speed Over Ground). 0 si parado. */
   sogKts: number;
-  /** Rumbo sobre fondo en grados (Course Over Ground), 0-360. 0 si parado. */
-  cogGrados: number;
+  /** Rumbo sobre fondo en grados (Course Over Ground), 0-360.
+   *  null si el GPS no entrega rumbo válido (parado / sin fix). Sesiones
+   *  antiguas pueden tener 0 en vez de null. */
+  cogGrados: number | null;
   /** Precisión horizontal en metros. */
   precisionMetros: number | null;
 };
@@ -44,7 +46,7 @@ export type Rendimiento = {
   bspActual: number;
   /** Porcentaje del polar (>100 = mejor que polar) */
   porcentajePolar: number;
-  /** VMG (Velocity Made Good) al viento en nudos (ceñida/popa) */
+  /** VMG (Velocity Made Good) en nudos, con signo: + hacia barlovento, − hacia sotavento */
   vmg?: number;
   /** VMC (Velocity Made Good to Course/Waypoint) en nudos */
   vmc?: number;

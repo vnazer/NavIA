@@ -11,12 +11,13 @@ export type Laylines = {
 
 /**
  * Estima el TWA óptimo de ceñida maximizando el VMG upwind.
- * Prueba ángulos cada 1° entre 25° y 80°.
+ * Prueba ángulos cada 1° desde el TWA mínimo del polar hasta 80°.
  */
 export function otaOptima(polar: Polar, tws: number): number {
   let mejorVmg = -Infinity;
   let mejorTwa = 42;
-  for (let twa = 25; twa <= 80; twa++) {
+  // Desde el TWA mínimo del polar (bajo él el clamp inventa BSP)
+  for (let twa = Math.ceil(polar.twa[0]); twa <= 80; twa++) {
     const bsp = consultarPolar(polar, tws, twa);
     const vmg = bsp * Math.cos((twa * Math.PI) / 180);
     if (vmg > mejorVmg) {

@@ -3,6 +3,8 @@ module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
     "./features/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./lib/**/*.{ts,tsx}",
   ],
   darkMode: "class",
   presets: [require("nativewind/preset")],
@@ -45,10 +47,12 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ["Inter-Regular", "system-ui"],
+        // Una sola familia por clave: en iOS una lista/fallback ("system-ui",
+        // "ui-monospace") no es una fuente válida.
+        sans: ["Inter-Regular"],
         "sans-medium": ["Inter-Medium"],
         "sans-bold":   ["Inter-Bold"],
-        mono:          ["JetBrainsMono-Bold", "ui-monospace"],
+        mono:          ["JetBrainsMono-Bold"],
         "mono-black":  ["JetBrainsMono-ExtraBold"],
       },
       fontSize: {

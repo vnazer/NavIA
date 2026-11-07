@@ -22,7 +22,8 @@ function calcularOptimoCenida(
   let mejorTwa = 45;
   let mejorBsp = 0;
   let mejorVmg = -Infinity;
-  for (let twa = 30; twa < 90; twa += 0.5) {
+  // Solo dentro del rango del polar: bajo el mínimo el clamp inventa BSP
+  for (let twa = polar.twa[0]; twa < 90; twa += 0.5) {
     const bsp = consultarPolar(polar, tws, twa);
     const vmg = vmgUpwind(twa, bsp);
     if (vmg > mejorVmg) {
@@ -41,7 +42,9 @@ function calcularOptimoEmpopada(
   let mejorTwa = 150;
   let mejorBsp = 0;
   let mejorVmg = -Infinity;
-  for (let twa = 91; twa <= 180; twa += 0.5) {
+  // Hasta el TWA máximo del polar (más allá el clamp hace ganar a 180°)
+  const twaMax = Math.min(180, polar.twa[polar.twa.length - 1]);
+  for (let twa = 91; twa <= twaMax; twa += 0.5) {
     const bsp = consultarPolar(polar, tws, twa);
     const vmg = vmgDownwind(twa, bsp);
     if (vmg > mejorVmg) {

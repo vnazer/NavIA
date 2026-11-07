@@ -77,11 +77,11 @@ export default function PantallaSpots() {
       return;
     }
     if (latNum === null || latNum < -90 || latNum > 90) {
-      setErrorForm("Latitud inválida. Usá decimal (ej: -32.7755).");
+      setErrorForm("Latitud inválida. Usa decimal (ej: -32.7755).");
       return;
     }
     if (lonNum === null || lonNum < -180 || lonNum > 180) {
-      setErrorForm("Longitud inválida. Usá decimal (ej: -71.5295).");
+      setErrorForm("Longitud inválida. Usa decimal (ej: -71.5295).");
       return;
     }
     const nuevo = agregarSpotCustom({
@@ -297,7 +297,7 @@ export default function PantallaSpots() {
             )}
 
             <Text className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-              Tip: en Google Maps tap-derecho sobre el punto → copia las
+              Tip: en Google Maps mantén presionado el punto → copia las
               coordenadas que aparecen primero.
             </Text>
 

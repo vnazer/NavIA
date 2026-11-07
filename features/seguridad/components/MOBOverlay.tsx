@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, Linking, Platform } from "react-native";
-import { AlertOctagon, Navigation, Share2, Phone, X, AlertTriangle } from "lucide-react-native";
+// Navigation2 apunta hacia arriba (Navigation de lucide apunta 45° a la derecha)
+import { AlertOctagon, Navigation2, Share2, Phone, X, AlertTriangle } from "lucide-react-native";
 import { useSeguridadStore } from "../store/useSeguridadStore";
 import { useGpsStore } from "@/features/regata/store/useGpsStore";
 import { useColores, useEsDeck } from "@/lib/tema";
@@ -14,18 +15,18 @@ export function MOBOverlay() {
   const esDeck = useEsDeck();
   const timerAnuncioRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [distancia, setDistancia] = useState<number>(0);
-  const [bearing, setBearing] = useState<number>(0);
+  const [distancia, setDistancia] = useState<number | null>(null);
+  const [bearing, setBearing] = useState<number | null>(null);
 
   // Loop de Anuncios de Voz de Emergencia cada 15 segundos
   useEffect(() => {
     if (!mobCoordenadas) return;
 
-    // Primer anuncio inmediato
-    decir("Alerta: Hombre al agua. Vira de inmediato para retornar.");
+    // Primer anuncio inmediato (prioritario: no lo tapa el copiloto)
+    decir("Alerta: Hombre al agua. Vira de inmediato para retornar.", { prioridad: true });
 
     timerAnuncioRef.current = setInterval(() => {
-      decir("Hombre al agua. Regresa al rumbo.");
+      decir("Hombre al agua. Regresa al rumbo.", { prioridad: true });
     }, 15000);
 
     return () => {
@@ -33,36 +34,50 @@ export function MOBOverlay() {
         clearInterval(timerAnuncioRef.current);
       }
     };
-  }, [mobCoordenadas]);
+    // Solo al activar/desactivar (no reiniciar el loop cuando llega la posición)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobCoordenadas?.ts]);
+
+  const mobLat = mobCoordenadas?.lat ?? null;
+  const mobLon = mobCoordenadas?.lon ?? null;
 
   // Recalcular distancia y rumbo en vivo
   useEffect(() => {
-    if (!mobCoordenadas || !ultimoPunto) return;
+    if (mobLat == null || mobLon == null || !ultimoPunto) {
+      setDistancia(null);
+      setBearing(null);
+      return;
+    }
 
-    const d = distanciaMetros(
-      ultimoPunto.lat,
-      ultimoPunto.lon,
-      mobCoordenadas.lat,
-      mobCoordenadas.lon
-    );
-    const b = calcularRumbo(
-      ultimoPunto.lat,
-      ultimoPunto.lon,
-      mobCoordenadas.lat,
-      mobCoordenadas.lon
-    );
+    const d = distanciaMetros(ultimoPunto.lat, ultimoPunto.lon, mobLat, mobLon);
+    const b = calcularRumbo(ultimoPunto.lat, ultimoPunto.lon, mobLat, mobLon);
 
     setDistancia(d);
     setBearing(b);
-  }, [ultimoPunto, mobCoordenadas]);
+  }, [ultimoPunto, mobLat, mobLon]);
 
   if (!mobCoordenadas) return null;
 
+  // Sin coordenadas, o datos de un fix no confirmado → se avisa explícitamente
+  const confirmada =
+    mobCoordenadas.confirmada !== false && mobLat != null && mobLon != null;
+
   // Formatear mensaje SOS
-  const latStr = mobCoordenadas.lat.toFixed(6);
-  const lonStr = mobCoordenadas.lon.toFixed(6);
-  const mapLink = `https://www.openstreetmap.org/?mlat=${latStr}&mlon=${lonStr}#map=18`;
-  const mensajeSOS = `¡NavIA SOS! HOMBRE AL AGUA. Coordenadas: Lat ${latStr}, Lon ${lonStr}. Distancia de retorno: ${distancia.toFixed(0)}m, Rumbo: ${bearing.toFixed(0)}°. Mapa: ${mapLink}`;
+  const latStr = mobLat != null ? mobLat.toFixed(6) : null;
+  const lonStr = mobLon != null ? mobLon.toFixed(6) : null;
+  const mapLink =
+    latStr && lonStr
+      ? `https://www.openstreetmap.org/?mlat=${latStr}&mlon=${lonStr}#map=18`
+      : null;
+  const textoPosicion =
+    latStr && lonStr
+      ? `Coordenadas: Lat ${latStr}, Lon ${lonStr}.`
+      : "Sin coordenadas GPS.";
+  const textoRetorno =
+    distancia != null && bearing != null
+      ? ` Distancia de retorno: ${distancia.toFixed(0)}m, Rumbo: ${bearing.toFixed(0)}°.`
+      : "";
+  const mensajeSOS = `¡NavIA SOS! HOMBRE AL AGUA.${confirmada ? "" : " POSICIÓN NO CONFIRMADA."} ${textoPosicion}${textoRetorno}${mapLink ? ` Mapa: ${mapLink}` : ""}`;
 
   // Gatillar SMS de Emergencia
   const enviarSOSSms = (telefono: string) => {
@@ -81,9 +96,15 @@ export function MOBOverlay() {
     });
   };
 
-  // Calcular diferencia de rumbo relativa para la flecha
-  const rumboActualBarco = ultimoPunto?.cogGrados ?? 0;
-  const difRumboRelativa = (bearing - rumboActualBarco + 360) % 360;
+  // Flecha de retorno: relativa a la proa (bearing − COG) si hay COG válido;
+  // sin COG (barco parado) mostramos el rumbo absoluto con el norte arriba.
+  const rumboActualBarco = ultimoPunto?.cogGrados ?? null;
+  const rotacionFlecha =
+    bearing == null
+      ? null
+      : rumboActualBarco != null
+        ? (bearing - rumboActualBarco + 360) % 360
+        : bearing;
 
   return (
     <View
@@ -109,8 +130,17 @@ export function MOBOverlay() {
           <Text style={{ fontSize: 18, fontFamily: "Inter-Bold", color: "#FFFFFF" }}>
             🚨 HOMBRE AL AGUA (M.O.B.)
           </Text>
-          <Text style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-            Coordenadas bloqueadas en el GPS al instante
+          <Text
+            style={{
+              fontSize: 11,
+              color: confirmada ? "#94a3b8" : "#fbbf24",
+              fontFamily: confirmada ? undefined : "Inter-Bold",
+              marginTop: 2,
+            }}
+          >
+            {confirmada
+              ? "Coordenadas bloqueadas en el GPS al instante"
+              : "POSICIÓN NO CONFIRMADA — buscando señal GPS"}
           </Text>
         </View>
         <Pressable
@@ -152,13 +182,17 @@ export function MOBOverlay() {
             backgroundColor: "#000000",
           }}
         >
-          <Navigation
-            size={32}
-            color="#dc2626"
-            style={{
-              transform: [{ rotate: `${difRumboRelativa}deg` }],
-            }}
-          />
+          {rotacionFlecha != null ? (
+            <Navigation2
+              size={32}
+              color="#dc2626"
+              style={{
+                transform: [{ rotate: `${rotacionFlecha}deg` }],
+              }}
+            />
+          ) : (
+            <Text style={{ fontSize: 22, fontFamily: "Inter-Bold", color: "#dc2626" }}>?</Text>
+          )}
         </View>
 
         {/* Datos en Vivo */}
@@ -166,22 +200,24 @@ export function MOBOverlay() {
           <View>
             <Text style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase" }}>Distancia a Víctima</Text>
             <Text style={{ fontSize: 22, fontFamily: "Inter-Bold", color: "#FFFFFF" }}>
-              {distancia >= 1000
-                ? `${metrosAMillasNauticas(distancia).toFixed(2)} NM`
-                : `${distancia.toFixed(0)} metros`}
+              {distancia == null
+                ? "—"
+                : distancia >= 1000
+                  ? `${metrosAMillasNauticas(distancia).toFixed(2)} NM`
+                  : `${distancia.toFixed(0)} metros`}
             </Text>
           </View>
           <View style={{ flexDirection: "row", gap: 16 }}>
             <View>
               <Text style={{ fontSize: 10, color: "#94a3b8" }}>Rumbo Retorno</Text>
               <Text style={{ fontSize: 15, fontFamily: "Inter-Bold", color: "#FFFFFF" }}>
-                {bearing.toFixed(0)}°
+                {bearing != null ? `${bearing.toFixed(0)}°` : "—"}
               </Text>
             </View>
             <View>
               <Text style={{ fontSize: 10, color: "#94a3b8" }}>Rumbo Barco</Text>
               <Text style={{ fontSize: 15, fontFamily: "Inter-Bold", color: "#dc2626" }}>
-                {rumboActualBarco.toFixed(0)}°
+                {rumboActualBarco != null ? `${rumboActualBarco.toFixed(0)}°` : "—"}
               </Text>
             </View>
           </View>

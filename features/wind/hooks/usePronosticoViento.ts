@@ -26,7 +26,8 @@ function clavePersistencia(spotId: string) {
   // v2 (Prompt 9): nuevos campos atmosféricos en el shape de Pronostico.
   // El cache v1 queda huérfano en AsyncStorage pero no rompe (los users
   // simplemente refetchean al primer load).
-  return `navia-pronostico-v2-${spotId}`;
+  // v3: rachas alineadas con la hora del viento medio (ver rachaAlineada).
+  return `navia-pronostico-v3-${spotId}`;
 }
 
 export function usePronosticoViento(): EstadoHook {

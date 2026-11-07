@@ -51,21 +51,26 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
         setError(null);
         useGpsStore.setState({ permiso: "concedido", error: null });
 
-        subscription = await Location.watchPositionAsync(
+        // Nota: activityType solo existe en startLocationUpdatesAsync (tareas
+        // en background); para watchPositionAsync lo que cuenta es la precisión.
+        const sub = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
             timeInterval: 1000,
             distanceInterval: 1,
           },
           (loc) => {
+            if (cancelado) return;
             const sogKts =
               loc.coords.speed != null && loc.coords.speed >= 0
                 ? loc.coords.speed * 1.9438
                 : 0;
+            // iOS entrega course = -1 cuando no hay rumbo válido (parado o sin
+            // fix). Eso es "sin COG" (null), NO rumbo 0° (norte).
             const cogGrados =
               loc.coords.heading != null && loc.coords.heading >= 0
                 ? loc.coords.heading
-                : 0;
+                : null;
 
             const punto: PuntoTrack = {
               ts: loc.timestamp,
@@ -80,6 +85,13 @@ export function useTrackingGPS({ activo, onPunto }: Opciones) {
             onPuntoRef.current?.(punto);
           },
         );
+        // Carrera: si el efecto se limpió mientras esperábamos la subscription,
+        // el cleanup no tenía qué remover → la removemos ahora.
+        if (cancelado) {
+          sub.remove();
+          return;
+        }
+        subscription = sub;
       } catch (err) {
         if (!cancelado) {
           const msg =

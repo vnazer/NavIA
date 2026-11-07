@@ -26,12 +26,18 @@ function MarcadorCirculo({ color }: { color: string }) {
 }
 
 function calcularRegion(puntos: PuntoAnalizado[]) {
-  const lats = puntos.map((p) => p.lat);
-  const lons = puntos.map((p) => p.lon);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons);
-  const maxLon = Math.max(...lons);
+  // Un solo recorrido (Math.min(...arr) con miles de puntos puede reventar
+  // el límite de argumentos)
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  let minLon = Infinity;
+  let maxLon = -Infinity;
+  for (const p of puntos) {
+    if (p.lat < minLat) minLat = p.lat;
+    if (p.lat > maxLat) maxLat = p.lat;
+    if (p.lon < minLon) minLon = p.lon;
+    if (p.lon > maxLon) maxLon = p.lon;
+  }
   const δLat = Math.max(maxLat - minLat, 0.001);
   const δLon = Math.max(maxLon - minLon, 0.001);
   return {
@@ -48,26 +54,57 @@ function colorPorPerformance(pct: number): string {
   return "#dc2626"; // Rojo (Subóptimo)
 }
 
-export function MapaTrack({ puntos }: Props) {
-  const region = useMemo(() => calcularRegion(puntos), [puntos]);
+/** Máximo de vértices a dibujar: con 1 punto/s una regata de 2 h son 7200. */
+const MAX_PUNTOS_MAPA = 1500;
 
-  const segments = useMemo(() => {
-    if (puntos.length < 2) return [];
-    const list = [];
-    for (let i = 1; i < puntos.length; i++) {
-      const p1 = puntos[i - 1];
-      const p2 = puntos[i];
-      list.push({
-        id: `${p1.ts}-${p2.ts}-${i}`,
+type Tramo = {
+  id: string;
+  color: string;
+  coordinates: { latitude: number; longitude: number }[];
+};
+
+/**
+ * Simplifica el track (1 de cada N puntos, conservando el último) y agrupa
+ * los segmentos consecutivos del mismo color en una sola Polyline.
+ * Antes: una Polyline por segmento (miles de vistas nativas).
+ */
+function construirTramos(puntos: PuntoAnalizado[]): Tramo[] {
+  if (puntos.length < 2) return [];
+  const paso = Math.max(1, Math.ceil(puntos.length / MAX_PUNTOS_MAPA));
+  const muestra: PuntoAnalizado[] = [];
+  for (let i = 0; i < puntos.length; i += paso) muestra.push(puntos[i]);
+  if (muestra[muestra.length - 1] !== puntos[puntos.length - 1]) {
+    muestra.push(puntos[puntos.length - 1]);
+  }
+
+  const tramos: Tramo[] = [];
+  let actual: Tramo | null = null;
+  for (let i = 1; i < muestra.length; i++) {
+    const p1 = muestra[i - 1];
+    const p2 = muestra[i];
+    const color = colorPorPerformance(p2.porcentajePolar);
+    if (actual && actual.color === color) {
+      actual.coordinates.push({ latitude: p2.lat, longitude: p2.lon });
+    } else {
+      // Nuevo tramo: arranca en p1 para que no queden huecos entre colores
+      actual = {
+        id: `${p1.ts}-${i}`,
+        color,
         coordinates: [
           { latitude: p1.lat, longitude: p1.lon },
           { latitude: p2.lat, longitude: p2.lon },
         ],
-        color: colorPorPerformance(p2.porcentajePolar),
-      });
+      };
+      tramos.push(actual);
     }
-    return list;
-  }, [puntos]);
+  }
+  return tramos;
+}
+
+export function MapaTrack({ puntos }: Props) {
+  const region = useMemo(() => calcularRegion(puntos), [puntos]);
+
+  const segments = useMemo(() => construirTramos(puntos), [puntos]);
 
   if (puntos.length < 2) {
     return null;
@@ -78,9 +115,22 @@ export function MapaTrack({ puntos }: Props) {
 
   return (
     <View style={styles.contenedor}>
-      <MapView style={StyleSheet.absoluteFill} region={region} mapType="none">
-        <UrlTile urlTemplate={TILES_NATIVO.base} maximumZ={19} zIndex={1} />
-        <UrlTile urlTemplate={TILES_NATIVO.seamark} maximumZ={19} zIndex={2} />
+      <MapView style={StyleSheet.absoluteFill} initialRegion={region} mapType="none">
+        {/* shouldReplaceMapContent: en iOS mapType="none" no existe; así OSM
+            reemplaza el mapa de Apple (sin etiquetas duplicadas) */}
+        <UrlTile
+          urlTemplate={TILES_NATIVO.base}
+          maximumZ={19}
+          zIndex={1}
+          shouldReplaceMapContent
+        />
+        {/* OpenSeaMap solo renderiza desde zoom 12 (debajo: placeholder) */}
+        <UrlTile
+          urlTemplate={TILES_NATIVO.seamark}
+          minimumZ={12}
+          maximumZ={19}
+          zIndex={2}
+        />
 
         {segments.map((seg) => (
           <Polyline
