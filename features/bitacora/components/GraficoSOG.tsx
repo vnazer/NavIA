@@ -2,6 +2,7 @@
 // Línea sólida azul = SOG real
 // Línea punteada gris = BSP teórico esperado del polar
 
+import { useState } from "react";
 import { View, Text } from "react-native";
 import Svg, {
   Rect,
@@ -14,11 +15,16 @@ import type { PuntoAnalizado } from "../lib/analitica";
 
 type Props = {
   puntos: PuntoAnalizado[];
+  /** Ancho fijo opcional; por defecto se mide el ancho disponible (onLayout). */
   width?: number;
   height?: number;
 };
 
-export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
+export function GraficoSOG({ puntos, width: anchoFijo, height = 220 }: Props) {
+  // Antes width=600 fijo: se salía de la pantalla del iPhone
+  const [anchoMedido, setAnchoMedido] = useState(0);
+  const width = anchoFijo ?? anchoMedido;
+
   if (puntos.length < 2) {
     return (
       <View style={{ borderRadius: 12, backgroundColor: "#f1f5f9", padding: 16 }}>
@@ -33,10 +39,21 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
 
+  if (width <= 0) {
+    // Primer render: medir el ancho disponible antes de dibujar
+    return (
+      <View
+        style={{ height }}
+        onLayout={(e) => setAnchoMedido(e.nativeEvent.layout.width)}
+      />
+    );
+  }
+
   const tMax = Math.max(puntos[puntos.length - 1].offsetSeg, 1);
-  const sogMax = Math.max(
-    ...puntos.map((p) => p.sogKts),
-    ...puntos.map((p) => p.bspTeorico),
+  // reduce en vez de Math.max(...arr): con miles de puntos el spread puede
+  // superar el límite de argumentos
+  const sogMax = puntos.reduce(
+    (m, p) => Math.max(m, p.sogKts, p.bspTeorico),
     1,
   );
   const sogTope = Math.max(Math.ceil(sogMax / 2) * 2, 2);
@@ -74,7 +91,7 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
   };
 
   return (
-    <View>
+    <View onLayout={(e) => setAnchoMedido(e.nativeEvent.layout.width)}>
       <Svg
         width={width}
         height={height}
@@ -105,7 +122,7 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
               fontSize={10}
               fill="#64748b"
               textAnchor="end"
-              fontFamily="system-ui"
+              fontFamily="Inter-Regular"
             >
               {s}
             </SvgText>
@@ -127,7 +144,7 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
               fontSize={10}
               fill="#64748b"
               textAnchor="middle"
-              fontFamily="system-ui"
+              fontFamily="Inter-Regular"
             >
               {formatearTiempo(t)}
             </SvgText>
@@ -139,7 +156,7 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
           y={padding.top - 4}
           fontSize={10}
           fill="#475569"
-          fontFamily="system-ui"
+          fontFamily="Inter-Regular"
           fontWeight="600"
         >
           kt
@@ -168,7 +185,7 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
             fontSize={10}
             fill="#0f172a"
             fontWeight="600"
-            fontFamily="system-ui"
+            fontFamily="Inter-Regular"
           >
             SOG real
           </SvgText>
@@ -186,7 +203,7 @@ export function GraficoSOG({ puntos, width = 600, height = 220 }: Props) {
             y={19}
             fontSize={10}
             fill="#475569"
-            fontFamily="system-ui"
+            fontFamily="Inter-Regular"
           >
             BSP teórico (polar)
           </SvgText>

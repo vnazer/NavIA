@@ -32,14 +32,30 @@ function encontrarRango(
   return { iInf: 0, iSup: 0, frac: 0 };
 }
 
+/** Rango de TWA en que el polar tiene datos: [mínimo, máximo] en grados. */
+export function rangoTwaPolar(polar: Polar): { min: number; max: number } {
+  return { min: polar.twa[0], max: polar.twa[polar.twa.length - 1] };
+}
+
 /**
  * Consulta la velocidad esperada (BSP) para un (TWS, TWA) dado.
  * Si los valores caen entre dos celdas, usa interpolación bilineal.
  * Si están fuera del rango del polar, usa el valor más cercano (clamp).
+ * Con `ceroBajoMinimo`, un TWA menor al mínimo del polar (zona de no
+ * navegación, p. ej. < 35°) devuelve 0 en vez del valor de 35°: útil para
+ * dibujar la curva y para no inventar velocidad proa al viento.
+ * OJO: los óptimos (VMG) deben buscarse solo dentro de rangoTwaPolar();
+ * con clamp, TWA 0-34° "rendiría" lo mismo que 35° y el óptimo se iría a 30°.
  */
-export function consultarPolar(polar: Polar, tws: TWS, twa: TWA): BSP {
+export function consultarPolar(
+  polar: Polar,
+  tws: TWS,
+  twa: TWA,
+  opciones?: { ceroBajoMinimo?: boolean },
+): BSP {
   // Trabajar con valor absoluto del TWA (simetría port-starboard)
   const twaAbs = Math.abs(twa);
+  if (opciones?.ceroBajoMinimo && twaAbs < polar.twa[0]) return 0;
 
   const filaTws = encontrarRango(polar.tws, tws);
   const colTwa = encontrarRango(polar.twa, twaAbs);

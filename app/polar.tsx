@@ -1,7 +1,7 @@
 // Pantalla con visualización completa del polar del barco seleccionado.
 // Acceso desde la pantalla principal vía link "Ver diagrama polar completo".
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
@@ -10,6 +10,7 @@ import { SPOTS } from "@/features/spots/data/spots";
 import { useBarcoStore } from "@/features/polar/store/useBarcoStore";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
+import { useVientoActual } from "@/features/wind/lib/vientoActual";
 import { VisualizadorPolar } from "@/features/polar/components/VisualizadorPolar";
 import { SelectorBarco } from "@/features/polar/components/SelectorBarco";
 import { calcularOptimos } from "@/features/polar/lib/calculos";
@@ -33,15 +34,12 @@ export default function PantallaPolar() {
 
   const { pronostico } = usePronosticoViento();
 
-  // TWS actual: viento del primer punto futuro del pronóstico
-  const twsActual = useMemo(() => {
-    if (!pronostico) return 10; // default razonable
-    const ahora = Date.now();
-    const punto = pronostico.puntos.find(
-      (p) => new Date(p.hora).getTime() >= ahora,
-    );
-    return punto?.velocidadNudos ?? pronostico.puntos[0]?.velocidadNudos ?? 10;
-  }, [pronostico]);
+  // TWS actual: hora del pronóstico más cercana a ahora (10 kt si no hay datos)
+  const vientoActual = useVientoActual(pronostico);
+  const twsActual = vientoActual?.velocidadNudos ?? 10;
+
+  // Ancho disponible para el SVG (un tamaño fijo de 360 no cabe en todos los iPhone)
+  const [anchoPolar, setAnchoPolar] = useState(0);
 
   const optimos = useMemo(
     () => calcularOptimos(barco.polar, twsActual),
@@ -85,8 +83,18 @@ export default function PantallaPolar() {
         </View>
 
         {/* SVG del polar */}
-        <View className="items-center rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-sm">
-          <VisualizadorPolar polar={barco.polar} twsActual={twsActual} size={360} />
+        <View
+          className="items-center rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-sm"
+          onLayout={(e) => setAnchoPolar(e.nativeEvent.layout.width)}
+        >
+          {anchoPolar > 0 && (
+            <VisualizadorPolar
+              polar={barco.polar}
+              twsActual={twsActual}
+              // ancho del contenedor menos el padding (p-4 = 16 por lado)
+              size={Math.min(360, Math.max(200, anchoPolar - 32))}
+            />
+          )}
         </View>
 
         {/* Tabla de óptimos */}

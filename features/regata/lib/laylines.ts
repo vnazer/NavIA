@@ -8,7 +8,7 @@
 // OTA = Optimal Tacking Angle (típicamente 40-45°, derivado del polar).
 
 import type { Polar } from "@/features/polar/types";
-import { consultarPolar } from "@/features/polar/lib/interpolacion";
+import { consultarPolar, rangoTwaPolar } from "@/features/polar/lib/interpolacion";
 
 export type Laylines = {
   /** [posición marca, extremo lejano] en lat/lon */
@@ -44,12 +44,14 @@ function puntoDestino(
 
 /**
  * Estima el TWA óptimo de ceñida maximizando el VMG upwind = BSP × cos(TWA).
- * Prueba ángulos cada 1° entre 25° y 80°.
+ * Prueba ángulos cada 1° desde el TWA mínimo del polar hasta 80° (bajo el
+ * mínimo no hay datos; con clamp el óptimo se iba artificialmente a 25°).
  */
 export function otaOptima(polar: Polar, tws: number): number {
   let mejorVmg = -Infinity;
   let mejorTwa = 42;
-  for (let twa = 25; twa <= 80; twa++) {
+  const { min } = rangoTwaPolar(polar);
+  for (let twa = Math.ceil(min); twa <= 80; twa++) {
     const bsp = consultarPolar(polar, tws, twa);
     const vmg = bsp * Math.cos((twa * Math.PI) / 180);
     if (vmg > mejorVmg) {

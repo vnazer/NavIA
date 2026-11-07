@@ -108,14 +108,14 @@ export default function PantallaBoyas() {
         </Pressable>
 
         <Text className="px-2 text-center text-xs text-slate-500 dark:text-slate-400">
-          O entrá al{" "}
+          O entra al{" "}
           <Text
             onPress={() => router.push("/mapa")}
             className="font-semibold text-mar-700 dark:text-mar-100"
           >
             mapa
           </Text>{" "}
-          y hacé click derecho (web) o mantené tocado (mobile) sobre el agua
+          y haz clic derecho (web) o mantén presionado (celular) sobre el agua
           para marcar una boya en ese punto.
         </Text>
 
@@ -126,7 +126,7 @@ export default function PantallaBoyas() {
               No hay boyas marcadas
             </Text>
             <Text className="text-center text-xs text-slate-500 dark:text-slate-400">
-              Cuando el juez envía las coords, las pegás acá. O las marcás en
+              Cuando el juez envíe las coordenadas, pégalas aquí. O márcalas en
               el mapa.
             </Text>
           </View>

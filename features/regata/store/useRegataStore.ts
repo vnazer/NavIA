@@ -1,11 +1,17 @@
-// Store de sesiones de regata. Persistido en AsyncStorage.
+// Store de sesiones de regata. Persistido en AsyncStorage con escritura
+// diferida (ver lib/persistenciaDiferida): con 1 punto GPS/s no queremos
+// serializar todo el historial en cada punto.
 // Una sesión activa por vez. Las terminadas se acumulan en historial.
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { persist } from "zustand/middleware";
 import type { PuntoPronostico } from "@/features/wind/types";
 import type { Boya } from "@/features/boyas/types";
+import { useBoyasStore } from "@/features/boyas/store/useBoyasStore";
+import {
+  crearPersistenciaDiferida,
+  flushPersistenciaDiferida,
+} from "@/lib/persistenciaDiferida";
 import type { PuntoTrack, Sesion } from "../types";
 
 type RegataState = {
@@ -52,6 +58,7 @@ export const useRegataStore = create<RegataState>()(
           puntos: [],
         };
         set({ sesionActiva: sesion });
+        void flushPersistenciaDiferida();
       },
 
       agregarPunto: (punto) => {
@@ -84,6 +91,8 @@ export const useRegataStore = create<RegataState>()(
           sesionActiva: null,
           sesionesHistoricas: [cerrada, ...get().sesionesHistoricas],
         });
+        // Guardar ya: no esperar al timer de escritura diferida
+        void flushPersistenciaDiferida();
       },
 
       eliminarSesion: (id) => {
@@ -92,6 +101,7 @@ export const useRegataStore = create<RegataState>()(
             (s) => s.id !== id,
           ),
         });
+        void flushPersistenciaDiferida();
       },
 
       getSesion: (id) => {
@@ -102,7 +112,8 @@ export const useRegataStore = create<RegataState>()(
     }),
     {
       name: "navia-regata",
-      storage: createJSONStorage(() => AsyncStorage),
+      // Escribe como máximo cada 12 s (+ flush en background / fin de sesión)
+      storage: crearPersistenciaDiferida<Partial<RegataState>>(12_000),
       version: 3,
       // Migrations:
       //  v1 → v2: agrega boyasSnapshot: [] si falta
@@ -158,3 +169,12 @@ export const useRegataStore = create<RegataState>()(
     },
   ),
 );
+
+// Las pantallas /boyas, /mapa y /tactica editan el store global de boyas.
+// Si hay sesión activa, replicamos esos cambios en su snapshot para que
+// /regata (que muestra sesion.boyasSnapshot) y la bitácora queden al día.
+useBoyasStore.subscribe((estado, previo) => {
+  if (estado.boyas === previo.boyas) return;
+  if (!useRegataStore.getState().sesionActiva) return;
+  useRegataStore.getState().actualizarBoyasSesion(estado.boyas);
+});

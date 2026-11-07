@@ -1,196 +1,111 @@
 import Foundation
-import CoreLocation
-import WatchKit
 import Combine
+import CoreLocation
 
-public enum SailingTack: String {
-    case starboard = "Estribor"
-    case port = "Babor"
-    case unknown = "---"
-}
+/// GPS del reloj: velocidad (SOG) y rumbo (COG) suavizado con media circular.
+final class GPSManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published private(set) var sogNudos: Double = 0
+    @Published private(set) var sogMaxNudos: Double = 0
+    @Published private(set) var cog: Double?
+    @Published private(set) var precision: Double = -1
+    @Published private(set) var ultimaUbicacion: CLLocation?
+    @Published private(set) var activo = false
+    @Published private(set) var permisoDenegado = false
 
-public class GPSManager: NSObject, ObservableObject, CLLocationManagerDelegate {
-    @Published public var speedInKnots: Double = 0.0
-    @Published public var courseInDegrees: Double = 0.0
-    @Published public var currentTack: SailingTack = .unknown
-    @Published public var shiftIndex: Double = 0.0 // Grados favorable (+) o negada (-)
-    @Published public var estimatedTWD: Double = 0.0 // True Wind Direction estimado
-    @Published public var gpsAccuracy: Double = 0.0
-    @Published public var isTracking: Bool = false
-    
-    private let locationManager = CLLocationManager()
-    
-    // Filtros y buffers para el cálculo de roles de viento
-    private var headingBuffer: [Double] = []
-    private let bufferLimit = 15 // ~15 segundos de rumbo para promediar
-    
-    private var stableStarboardHeading: Double?
-    private var stablePortHeading: Double?
-    
-    override public init() {
+    /// Cada lectura válida (para la ruta del entrenamiento y la táctica).
+    var alRecibir: ((CLLocation) -> Void)?
+
+    private let manager = CLLocationManager()
+    private var muestrasCog: [(fecha: Date, rumbo: Double)] = []
+    private let ventanaCog: TimeInterval = 4
+
+    override init() {
         super.init()
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.distanceFilter = 1.0 // Actualizar cada metro de movimiento
-        
-        // Habilitar actualizaciones en segundo plano para watchOS
-        locationManager.allowsBackgroundLocationUpdates = true
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        manager.distanceFilter = kCLDistanceFilterNone
+        manager.activityType = .otherNavigation
+        // Requiere UIBackgroundModes=location; sigue registrando con la muñeca abajo
+        // mientras la sesión de entrenamiento mantiene la app viva.
+        manager.allowsBackgroundLocationUpdates = true
     }
-    
-    public func requestPermissionsAndStart() {
-        let status = locationManager.authorizationStatus
-        if status == .notDetermined {
-            locationManager.requestAlwaysAuthorization()
-        } else if status == .authorizedAlways || status == .authorizedWhenInUse {
-            startTracking()
+
+    func iniciar() {
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            arrancar()
+        default:
+            permisoDenegado = true
         }
     }
-    
-    public func startTracking() {
-        locationManager.startUpdatingLocation()
-        isTracking = true
-        // Feedback háptico al iniciar el entrenamiento Laser
-        WKInterfaceDevice.current().play(.start)
+
+    func detener() {
+        manager.stopUpdatingLocation()
+        activo = false
     }
-    
-    public func stopTracking() {
-        locationManager.stopUpdatingLocation()
-        isTracking = false
-        WKInterfaceDevice.current().play(.stop)
+
+    func reiniciarMaximo() { sogMaxNudos = 0 }
+
+    private func arrancar() {
+        permisoDenegado = false
+        guard !activo else { return }
+        manager.startUpdatingLocation()
+        activo = true
     }
-    
+
     // MARK: - CLLocationManagerDelegate
-    
-    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        
-        // Actualizar precisión y filtrar lecturas ruidosas
-        self.gpsAccuracy = location.horizontalAccuracy
-        guard location.horizontalAccuracy < 20.0 else { return }
-        
-        // 1. Convertir velocidad a nudos (1 m/s = 1.94384 nudos)
-        let rawSpeed = location.speed
-        self.speedInKnots = rawSpeed > 0 ? (rawSpeed * 1.94384) : 0.0
-        
-        // 2. Extraer rumbo COG (Course Over Ground)
-        let rawCourse = location.course
-        guard rawCourse >= 0 else { return } // -1 indica rumbo no válido
-        self.courseInDegrees = rawCourse
-        
-        // Evitar cálculos tácticos si el bote está parado o derivando lento
-        if self.speedInKnots > 0.8 {
-            processTacticalCalculations(currentHeading: rawCourse)
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse: arrancar()
+        case .denied, .restricted: permisoDenegado = true
+        default: break
         }
     }
-    
-    public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse {
-            startTracking()
-        }
-    }
-    
-    // MARK: - Algoritmo Táctico Offline "roles de viento" (Nivel Dios)
-    
-    private func processTacticalCalculations(currentHeading: Double) {
-        // Añadir rumbo al búfer dinámico
-        headingBuffer.append(currentHeading)
-        if headingBuffer.count > bufferLimit {
-            headingBuffer.removeFirst()
-        }
-        
-        // Calcular varianza de rumbo en el búfer para determinar si navegamos estables o virando
-        let averageHeading = headingBuffer.reduce(0.0, +) / Double(headingBuffer.count)
-        let variance = headingBuffer.map { pow($0 - averageHeading, 2) }.reduce(0.0, +) / Double(headingBuffer.count)
-        
-        let isStable = variance < 8.0 // Menos de 8 grados de desviación en 15s indica bordo estable
-        
-        if isStable {
-            // Clasificar bordo: La ceñida del Laser típicamente tiene una diferencia de ~90° entre amuras
-            if let starboard = stableStarboardHeading {
-                // Si la diferencia es de aproximadamente 90° (+/- 25°) determinamos la otra amura
-                let diff = angleDifference(currentHeading, starboard)
-                if abs(diff - 90.0) < 25.0 {
-                    stablePortHeading = currentHeading
-                    currentTack = .port
-                } else if abs(diff) < 20.0 {
-                    stableStarboardHeading = currentHeading
-                    currentTack = .starboard
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        for loc in locations {
+            precision = loc.horizontalAccuracy
+            // Descarta lecturas sin precisión o demasiado ruidosas para táctica.
+            guard loc.horizontalAccuracy >= 0, loc.horizontalAccuracy < 25 else { continue }
+
+            // Si el chip no entrega velocidad/rumbo (señal débil), se derivan de la
+            // posición anterior.
+            var velocidad = loc.speed
+            var rumbo = loc.course
+            // Sin `speedAccuracy` (-1) se confía en la velocidad que entrega el chip.
+            var velocidadFiable = loc.speed >= 0 && loc.speedAccuracy < 1.5
+            if let previa = ultimaUbicacion, velocidad < 0 || rumbo < 0 {
+                let dt = loc.timestamp.timeIntervalSince(previa.timestamp)
+                if dt >= 0.5 && dt <= 10 {
+                    let distancia = loc.distance(from: previa)
+                    if velocidad < 0 { velocidad = distancia / dt }
+                    if rumbo < 0, distancia >= 2 { rumbo = Nautica.rumbo(desde: previa.coordinate, hasta: loc.coordinate) }
+                    velocidadFiable = false
                 }
-            } else if let port = stablePortHeading {
-                let diff = angleDifference(currentHeading, port)
-                if abs(diff + 90.0) < 25.0 {
-                    stableStarboardHeading = currentHeading
-                    currentTack = .starboard
-                } else if abs(diff) < 20.0 {
-                    stablePortHeading = currentHeading
-                    currentTack = .port
-                }
-            } else {
-                // Primer bordo registrado (asumimos Estribor temporalmente)
-                stableStarboardHeading = currentHeading
-                currentTack = .starboard
             }
-            
-            // Actualizar la dirección media del viento estimado (TWD) basado en las amuras estables
-            if let starboard = stableStarboardHeading, let port = stablePortHeading {
-                // El viento medio es la bisectriz del ángulo de las viradas
-                let bisector = (starboard + port) / 2.0
-                estimatedTWD = bisector.truncatingRemainder(dividingBy: 360.0)
-            } else if estimatedTWD == 0.0 {
-                // Si no hay dos amuras estables aún, estimamos el viento a 45 grados de la amura actual
-                let offset = (currentTack == .starboard) ? 45.0 : -45.0
-                estimatedTWD = (currentHeading + offset).truncatingRemainder(dividingBy: 360.0)
+
+            let sog = max(velocidad, 0) * Nautica.msANudos
+            sogNudos = sog
+            if sog > sogMaxNudos, velocidadFiable {
+                sogMaxNudos = sog
             }
-            
-            // Calcular el índice de borneo (Shift Index)
-            calculateShiftIndex(currentHeading: currentHeading)
-        } else {
-            // Rumbo inestable: Posiblemente estamos en medio de una virada
-            let firstHeading = headingBuffer.first ?? currentHeading
-            let totalDiff = angleDifference(currentHeading, firstHeading)
-            
-            // Si viramos más de 60 grados, confirmamos cambio de bordo y emitimos haptics suaves
-            if abs(totalDiff) > 60.0 {
-                currentTack = (currentTack == .starboard) ? .port : .starboard
-                headingBuffer.removeAll()
-                WKInterfaceDevice.current().play(.click) // Feedback táctil de virada completada
+
+            // El rumbo del GPS no sirve con el bote casi detenido.
+            if rumbo >= 0, sog >= 0.6 {
+                muestrasCog.append((loc.timestamp, rumbo))
             }
+            muestrasCog.removeAll { loc.timestamp.timeIntervalSince($0.fecha) > ventanaCog }
+            cog = Nautica.mediaCircular(muestrasCog.map(\.rumbo))
+
+            ultimaUbicacion = loc
+            alRecibir?(loc)
         }
     }
-    
-    private func calculateShiftIndex(currentHeading: Double) {
-        guard estimatedTWD > 0 else { return }
-        
-        let targetHeading: Double
-        let deviation: Double
-        
-        if currentTack == .starboard {
-            // En Estribor: Rumbo ideal = TWD - 45°. Grados por encima es Favorable (+), por debajo es Negada (-)
-            targetHeading = (estimatedTWD - 45.0 + 360.0).truncatingRemainder(dividingBy: 360.0)
-            deviation = angleDifference(currentHeading, targetHeading)
-        } else {
-            // En Babor: Rumbo ideal = TWD + 45°. Grados por debajo (hacia el este) es Favorable (+), por encima es Negada (-)
-            targetHeading = (estimatedTWD + 45.0).truncatingRemainder(dividingBy: 360.0)
-            deviation = -angleDifference(currentHeading, targetHeading)
-        }
-        
-        // Filtro de paso bajo para suavizar el índice de borneo
-        let alpha = 0.2
-        self.shiftIndex = (alpha * deviation) + ((1.0 - alpha) * self.shiftIndex)
-        
-        // ALERTAR AL TIMONEL: Si la negada (Header) supera los -3° de pérdida, avisar por háptica (¡Vira ya!)
-        if self.shiftIndex < -3.5 {
-            // Alerta táctica vibratoria para virar en el momento óptimo del borneo
-            WKInterfaceDevice.current().play(.directionDown)
-        }
-    }
-    
-    // MARK: - Utilidades Matemáticas de Rumbo
-    
-    private func angleDifference(_ current: Double, _ target: Double) -> Double {
-        var diff = current - target
-        while diff < -180.0 { diff += 360.0 }
-        while diff > 180.0  { diff -= 360.0 }
-        return diff
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // kCLErrorLocationUnknown es transitorio; el resto se refleja en `precision`.
     }
 }

@@ -15,7 +15,7 @@ export function ControlModoEdicion({ activo, onToggle }: Props) {
       title={
         activo
           ? "Salir del modo edición"
-          : "Modo edición: arrastrá los marcadores"
+          : "Modo edición: arrastra los marcadores"
       }
       style={{
         position: "absolute",

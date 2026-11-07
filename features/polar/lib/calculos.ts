@@ -1,7 +1,7 @@
 // Cálculos derivados del polar: VMG, ángulos óptimos de ceñida y empopada.
 
 import type { Polar, OptimosPolar } from "../types";
-import { consultarPolar } from "./interpolacion";
+import { consultarPolar, rangoTwaPolar } from "./interpolacion";
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -24,7 +24,8 @@ export function vmgDownwind(twa: number, bsp: number): number {
 
 /**
  * Encuentra el TWA y BSP óptimos en zona upwind (ceñida) para una TWS dada.
- * Barre TWA de 30° a 89° en pasos de 0.5° y elige el que maximiza VMG.
+ * Barre TWA desde el mínimo del polar (no inventa datos bajo él) hasta 89°
+ * en pasos de 0.5° y elige el que maximiza VMG.
  */
 function calcularOptimoCenida(
   polar: Polar,
@@ -34,7 +35,8 @@ function calcularOptimoCenida(
   let mejorBsp = 0;
   let mejorVmg = -Infinity;
 
-  for (let twa = 30; twa < 90; twa += 0.5) {
+  const { min } = rangoTwaPolar(polar);
+  for (let twa = min; twa < 90; twa += 0.5) {
     const bsp = consultarPolar(polar, tws, twa);
     const vmg = vmgUpwind(twa, bsp);
     if (vmg > mejorVmg) {
@@ -49,7 +51,9 @@ function calcularOptimoCenida(
 
 /**
  * Encuentra el TWA y BSP óptimos en zona downwind (empopada) para una TWS dada.
- * Barre TWA de 91° a 180° en pasos de 0.5° y elige el que maximiza VMG.
+ * Barre TWA de 91° hasta el máximo del polar (≤ 180°) en pasos de 0.5° y
+ * elige el que maximiza VMG. Más allá del máximo no hay datos: con clamp,
+ * 180° "rendiría" lo mismo que 170° y siempre ganaría.
  */
 function calcularOptimoEmpopada(
   polar: Polar,
@@ -59,7 +63,9 @@ function calcularOptimoEmpopada(
   let mejorBsp = 0;
   let mejorVmg = -Infinity;
 
-  for (let twa = 91; twa <= 180; twa += 0.5) {
+  const { max } = rangoTwaPolar(polar);
+  const twaMax = Math.min(180, max);
+  for (let twa = 91; twa <= twaMax; twa += 0.5) {
     const bsp = consultarPolar(polar, tws, twa);
     const vmg = vmgDownwind(twa, bsp);
     if (vmg > mejorVmg) {

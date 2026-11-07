@@ -57,6 +57,11 @@ target 'NavIA' do
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        # Xcode 27 rechaza deployment targets < 15.0 (react-native-maps y
+        # AsyncStorage declaran 11.0/13.4 en sus resource bundles).
+        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.1
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
 
         if target.name == 'fmt'
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'

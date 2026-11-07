@@ -2,11 +2,25 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>NavIA</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>NavIA usa el GPS del reloj para medir tu velocidad, rumbo y borneos durante la navegación.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>NavIA lee tu pulso durante la sesión de vela.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>NavIA guarda tus sesiones de vela, con su ruta, en Salud y Fitness.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 	</array>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+	</array>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>cl.magama.navia</string>
+	<key>WKRunsIndependentlyOfCompanionApp</key>
+	<true/>
 </dict>
 </plist>

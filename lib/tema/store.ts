@@ -18,7 +18,9 @@ export const useTemaStore = create<TemaStore>()(
       setOscuro: (v) => set({ oscuro: v }),
     }),
     {
-      name: "navia-tema",
+      // Clave propia: lib/tema.ts (modo deck/light) usa "navia-tema" y ambos
+      // stores se pisaban al persistir en la misma clave.
+      name: "navia-tema-oscuro",
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),

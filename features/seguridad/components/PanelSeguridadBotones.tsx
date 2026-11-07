@@ -1,40 +1,29 @@
 import React from "react";
 import { View, Text, Pressable, Alert } from "react-native";
 import { LifeBuoy, AlertTriangle } from "lucide-react-native";
-import { useSeguridadStore } from "../store/useSeguridadStore";
+import { localizarMOB, useSeguridadStore } from "../store/useSeguridadStore";
 import { useGpsStore } from "@/features/regata/store/useGpsStore";
-import { useSpotStore } from "@/features/spots/store/useSpotStore";
-import { SPOTS } from "@/features/spots/data/spots";
 import { useColores } from "@/lib/tema";
 import { decir } from "@/lib/voz/servicio";
 
 export function PanelSeguridadBotones() {
   const { mobCoordenadas, activarMOB } = useSeguridadStore();
   const ultimoPunto = useGpsStore((s) => s.ultimoPunto);
-  const spotId = useSpotStore((s) => s.spotIdSeleccionado);
-  const customSpots = useSpotStore((s) => s.customSpots);
   const c = useColores();
 
   // No renderizar si MOB ya está activo (el MOBOverlay se encarga de mostrar la info completa)
   if (mobCoordenadas) return null;
 
   const handleActivarMOB = () => {
-    let lat = 0;
-    let lon = 0;
-
     if (ultimoPunto) {
-      lat = ultimoPunto.lat;
-      lon = ultimoPunto.lon;
-    } else {
-      // Fallback al spot seleccionado si no hay señal GPS en este instante
-      const todos = [...SPOTS, ...customSpots];
-      const spot = todos.find((s) => s.id === spotId) ?? SPOTS[0];
-      lat = spot.lat;
-      lon = spot.lon;
-      decir("Advertencia: Sin señal GPS activa. Bloqueando posición estimada del puerto.");
+      activarMOB(ultimoPunto.lat, ultimoPunto.lon, true);
+      return;
     }
-
-    activarMOB(lat, lon);
+    // Sin punto GPS en vivo: activamos YA (sin coordenadas) y pedimos la
+    // posición al GPS. Nunca usamos el spot como si fuera la posición real.
+    activarMOB(null, null, false);
+    decir("Advertencia: sin señal GPS en vivo. Buscando posición.", { prioridad: true });
+    void localizarMOB();
   };
 
   return (

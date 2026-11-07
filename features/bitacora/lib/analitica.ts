@@ -45,7 +45,8 @@ export function analizarSesion(
     let twa = 0;
     let bspTeorico = 0;
     let porcentajePolar = 0;
-    if (viento) {
+    // Sin COG válido no hay TWA: el punto queda fuera de las métricas de polar
+    if (viento && p.cogGrados != null) {
       twa = diferenciaRumboNormalizada(p.cogGrados, viento.direccionGrados);
       bspTeorico = consultarPolar(polar, viento.velocidadNudos, twa);
       porcentajePolar = bspTeorico > 0 ? (p.sogKts / bspTeorico) * 100 : 0;
@@ -90,7 +91,9 @@ export function calcularMetricasSesion(
 
   const sogs = puntos.map((p) => p.sogKts);
   const sogPromedio = sogs.reduce((a, b) => a + b, 0) / sogs.length;
-  const sogMax = Math.max(...sogs);
+  // reduce en vez de Math.max(...arr): con miles de puntos el spread puede
+  // reventar el stack de argumentos.
+  const sogMax = sogs.reduce((m, v) => (v > m ? v : m), 0);
 
   const navegando = puntos.filter((p) => p.sogKts > 0.5);
   const porcentajeTiempoNavegando =
@@ -112,8 +115,9 @@ export function calcularMetricasSesion(
   const pctTiempoEnPolar = (enPolar / totalPolar) * 100;
   const pctTiempoBajoPolar = (bajoPolar / totalPolar) * 100;
 
-  const upwind = navegando.filter((p) => p.twa < 90);
-  const downwind = navegando.filter((p) => p.twa >= 90);
+  const conRumbo = navegando.filter((p) => p.cogGrados != null);
+  const upwind = conRumbo.filter((p) => p.twa < 90);
+  const downwind = conRumbo.filter((p) => p.twa >= 90);
 
   const twaPromedioCenida =
     upwind.length > 0

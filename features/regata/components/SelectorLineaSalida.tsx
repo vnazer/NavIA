@@ -30,7 +30,7 @@ export function SelectorLineaSalida() {
     return (
       <View className="rounded-xl border border-amber-200 bg-amber-50 p-3">
         <Text className="text-sm text-amber-800">
-          Necesitás al menos 2 boyas para definir la línea de salida.
+          Necesitas al menos 2 boyas para definir la línea de salida.
         </Text>
       </View>
     );

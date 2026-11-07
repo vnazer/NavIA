@@ -8,27 +8,28 @@ import type { Rendimiento } from "../types";
 
 /**
  * Calcula el rendimiento comparando velocidad actual con polar.
- * Si tws muy bajo o sog 0, retorna null.
+ * Si tws muy bajo, sog 0 o no hay COG válido (null), retorna null.
  * Opcionalmente calcula el VMC si se provee la boya/waypoint activa.
  */
 export function calcularRendimiento(
   polar: Polar,
-  cogGrados: number,
+  cogGrados: number | null,
   sogKts: number,
   twd: number,
   tws: number,
   posBarco?: { lat: number; lon: number } | null,
   activeWaypoint?: { lat: number; lon: number } | null,
 ): Rendimiento | null {
-  if (sogKts <= 0 || tws < 1) return null;
+  if (cogGrados == null || sogKts <= 0 || tws < 1) return null;
 
   const twa = diferenciaRumboNormalizada(cogGrados, twd);
   const bspEsperado = consultarPolar(polar, tws, twa);
   const porcentajePolar =
     bspEsperado > 0.1 ? (sogKts / bspEsperado) * 100 : 0;
 
-  // 1. VMG (Velocity Made Good) al viento
-  // VMG = SOG * cos(TWA)
+  // 1. VMG (Velocity Made Good) respecto al viento, CON SIGNO:
+  // VMG = SOG * cos(TWA) → positivo = avanzando hacia barlovento (ceñida),
+  // negativo = hacia sotavento (popa). La UI muestra |VMG| con ↑ / ↓.
   const twaRad = (twa * Math.PI) / 180;
   const vmg = sogKts * Math.cos(twaRad);
 

@@ -19,6 +19,7 @@ import { es } from "date-fns/locale/es";
 import { useSpotStore } from "@/features/spots/store/useSpotStore";
 import { useColorPorTema } from "@/lib/tema/colores";
 import { usePronosticoViento } from "@/features/wind/hooks/usePronosticoViento";
+import { useIndiceAhora } from "@/features/wind/lib/vientoActual";
 import { TarjetaCondicionActual } from "@/features/wind/components/TarjetaCondicionActual";
 import { TarjetaAtmosfera } from "@/features/wind/components/TarjetaAtmosfera";
 import { ListaPronostico } from "@/features/wind/components/ListaPronostico";
@@ -41,40 +42,23 @@ export default function PantallaPrincipal() {
 
   const { pronostico, cargando, error, recargar } = usePronosticoViento();
 
-  // Estado: índice de la hora seleccionada en el array de puntos.
-  // Se inicializa cuando llegan los datos al primer punto futuro.
-  const [indiceSeleccionado, setIndiceSeleccionado] = useState<number | null>(
-    null,
-  );
+  // Índice "ahora": hora del pronóstico más cercana a ahora, recalculada cada
+  // minuto (helper compartido con /regata y /tactica).
+  const indiceAhora = useIndiceAhora(pronostico);
 
-  // Calcular el índice "ahora" cuando llega el pronóstico
-  const indiceAhora = useMemo(() => {
-    if (!pronostico) return null;
-    const ahoraTs = Date.now() - 60 * 60 * 1000;
-    const idx = pronostico.puntos.findIndex(
-      (p) => new Date(p.hora).getTime() >= ahoraTs,
-    );
-    return idx === -1 ? 0 : idx;
-  }, [pronostico]);
+  // Hora elegida por el usuario en la lista. null = seguir "ahora" (así el
+  // bloque AHORA avanza solo cuando pasa la hora).
+  const [indiceElegido, setIndiceElegido] = useState<number | null>(null);
+  const indiceSeleccionado = indiceElegido ?? indiceAhora;
 
-  // Cuando llega el pronóstico, inicializar selección en "ahora"
+  // Si se cambió de spot, volver a "ahora" del nuevo pronóstico
   useEffect(() => {
-    if (indiceAhora !== null && indiceSeleccionado === null) {
-      setIndiceSeleccionado(indiceAhora);
-    }
-  }, [indiceAhora, indiceSeleccionado]);
-
-  // Si se cambió de spot, resetear selección a "ahora" del nuevo pronóstico
-  useEffect(() => {
-    if (indiceAhora !== null) {
-      setIndiceSeleccionado(indiceAhora);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setIndiceElegido(null);
   }, [spot.id]);
 
   const puntoSeleccionado =
     pronostico && indiceSeleccionado !== null
-      ? pronostico.puntos[indiceSeleccionado]
+      ? pronostico.puntos[indiceSeleccionado] ?? null
       : null;
 
   const esAhora =
@@ -193,7 +177,7 @@ export default function PantallaPrincipal() {
         {/* Botón "volver a ahora" si la selección no es ahora */}
         {!esAhora && indiceAhora !== null && (
           <Pressable
-            onPress={() => setIndiceSeleccionado(indiceAhora)}
+            onPress={() => setIndiceElegido(null)}
             className="self-center rounded-full bg-slate-200 px-4 py-2"
           >
             <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -207,7 +191,7 @@ export default function PantallaPrincipal() {
           <ListaPronostico
             puntos={pronostico.puntos}
             indiceSeleccionado={indiceSeleccionado}
-            onSeleccionar={setIndiceSeleccionado}
+            onSeleccionar={setIndiceElegido}
           />
         )}
 

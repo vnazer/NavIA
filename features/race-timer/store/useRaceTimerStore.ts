@@ -1,7 +1,7 @@
 // Store del race timer (countdown hasta el start de la regata).
 // El timer no se "ejecuta" — solo guarda startTs (timestamp del start) y
 // duracionInicialSeg. El tiempo restante se calcula on-demand por el hook
-// useRaceTimer cada segundo, así sobrevive a refresh y no consume cpu.
+// useRaceTimer cada 250 ms, así sobrevive a refresh y no consume cpu.
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -17,7 +17,7 @@ type Estado = {
 type Acciones = {
   /** Inicia un countdown de N segundos desde ahora. */
   iniciar: (segundos: number) => void;
-  /** Sincroniza al múltiplo de minuto más cercano (regla 5/4/1 de regata). */
+  /** Sincroniza al minuto entero más cercano (arriba o abajo) — regla 5/4/1. */
   sincronizar: () => void;
   /** Detiene/limpia el timer. */
   detener: () => void;
@@ -37,14 +37,15 @@ export const useRaceTimerStore = create<Estado & Acciones>()(
       },
 
       sincronizar: () => {
-        // "Sync" en regla de regata: redondea al múltiplo de minuto más cercano
-        // (típicamente usado en la señal "preparatory" para alinear con bocina).
+        // "Sync" en regla de regata: redondea al minuto entero más cercano
+        // (típicamente al oír la señal de preparación, para alinear con la bocina).
         const startTs = get().startTs;
         if (!startTs) return;
         const ahora = Date.now();
         const restanteMs = startTs - ahora;
         if (restanteMs <= 0) return;
-        // Redondear al minuto entero más cercano hacia abajo
+        // Math.round: al minuto MÁS CERCANO (4:40 → 5:00, 4:20 → 4:00).
+        // Si redondea a 0 (quedan < 30 s), el start pasa a ser ahora.
         const minutosRestantes = Math.round(restanteMs / 60000);
         set({ startTs: ahora + minutosRestantes * 60000 });
       },

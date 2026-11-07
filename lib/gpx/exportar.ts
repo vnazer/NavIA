@@ -26,8 +26,7 @@ function generarGpx(sesion: Sesion): string {
       <time>${t}</time>
       <extensions>
         <speed>${(p.sogKts * 0.514444).toFixed(2)}</speed>
-        <course>${p.cogGrados.toFixed(1)}</course>
-      </extensions>
+${p.cogGrados != null ? `        <course>${p.cogGrados.toFixed(1)}</course>\n` : ""}      </extensions>
     </trkpt>`;
     })
     .join("\n");
@@ -126,12 +125,12 @@ function exportarWeb(gpx: string, nombre: string): ResultadoExport {
   if (abrirEnNuevaPestana(gpx)) {
     return {
       ok: true,
-      mensaje: "Abrí el archivo en una nueva pestaña. Guardalo con Cmd+S / Ctrl+S.",
+      mensaje: "Abre el archivo en una nueva pestaña. Guárdalo con Cmd+S / Ctrl+S.",
     };
   }
   return {
     ok: false,
-    mensaje: "El navegador bloqueó la descarga. Probá desactivar bloqueadores.",
+    mensaje: "El navegador bloqueó la descarga. Prueba desactivar los bloqueadores.",
   };
 }
 

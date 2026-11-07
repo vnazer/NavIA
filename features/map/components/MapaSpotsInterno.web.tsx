@@ -417,7 +417,7 @@ export default function MapaSpotsInterno() {
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           }}
         >
-          🎯 Arrastrá cada marcador a la ubicación correcta del club
+          🎯 Arrastra cada marcador a la ubicación correcta del club
         </div>
       )}
 
@@ -439,7 +439,7 @@ export default function MapaSpotsInterno() {
             boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
           }}
         >
-          Click derecho (o mantené tocado) sobre el mapa para marcar una boya
+          Clic derecho (o mantén presionado) sobre el mapa para marcar una boya
         </div>
       )}
 

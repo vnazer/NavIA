@@ -13,6 +13,10 @@
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
 
+  // iOS 27 exige el ciclo de vida por escenas (UIScene): la ventana de React
+  // Native la crea SceneDelegate al conectarse la escena, no aquí.
+  self.automaticallyLoadReactNativeWindow = NO;
+
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 
@@ -57,6 +61,58 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
   return [super application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
+}
+
+@end
+
+#pragma mark - SceneDelegate
+
+// Crea la ventana de React Native dentro de la escena. Sin esto, una app
+// compilada con el SDK de iOS 27 se cierra al abrir
+// (UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption).
+@implementation SceneDelegate
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions
+{
+  if (![scene isKindOfClass:[UIWindowScene class]]) {
+    return;
+  }
+  AppDelegate *appDelegate = (AppDelegate *)UIApplication.sharedApplication.delegate;
+
+  // Deep link con el que se abrió la app (navia://…), para Linking.getInitialURL().
+  NSMutableDictionary *launchOptions = [NSMutableDictionary new];
+  NSURL *url = connectionOptions.URLContexts.anyObject.URL;
+  if (url != nil) {
+    launchOptions[UIApplicationLaunchOptionsURLKey] = url;
+  }
+
+  UIView *rootView = [appDelegate.rootViewFactory viewWithModuleName:appDelegate.moduleName
+                                                   initialProperties:appDelegate.initialProps
+                                                       launchOptions:launchOptions];
+  UIViewController *rootViewController = [appDelegate createRootViewController];
+  [appDelegate setRootView:rootView toRootViewController:rootViewController];
+
+  UIWindow *window = [[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene];
+  window.rootViewController = rootViewController;
+  self.window = window;
+  // Expo y RN leen la ventana desde el AppDelegate.
+  appDelegate.window = window;
+  [window makeKeyAndVisible];
+}
+
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
+{
+  UIOpenURLContext *context = URLContexts.anyObject;
+  if (context != nil) {
+    [RCTLinkingManager application:UIApplication.sharedApplication openURL:context.URL options:@{}];
+  }
+}
+
+- (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity
+{
+  [RCTLinkingManager application:UIApplication.sharedApplication
+            continueUserActivity:userActivity
+              restorationHandler:^(NSArray<id<UIUserActivityRestoring>> *_Nullable objects) {}];
 }
 
 @end

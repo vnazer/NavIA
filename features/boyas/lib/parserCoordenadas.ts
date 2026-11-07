@@ -3,6 +3,10 @@
 // - Decimal etiquetado: 33.039 S, 71.599 W
 // - Grados/min:        33°02.34'S 71°35.98'W
 // - Grados/min (espacios): 33 02.34 S 71 35.98 W
+// - Grados/min/seg:    33°02'20.4"S 71°35'58.8"W  (o 33 02 20.4 S 71 35 58.8 W)
+// - Coma decimal:      -33,039 -71,599  ·  33°02,34'S 71°35,98'W
+// - Símbolos "parecidos" que pegan WhatsApp/Word/iOS: º ˚ → °, ’ ‘ ´ ` ′ → ',
+//   ″ “ ” → "
 // - Múltiples puntos en líneas separadas o con separadores ;|
 
 export type ResultadoParser =
@@ -10,7 +14,14 @@ export type ResultadoParser =
   | { ok: false; error: string };
 
 const RE_DECIMAL_SIMPLE =
-  /^\s*(-?\d{1,3}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
+  /^\s*(-?\d{1,3}(?:\.\d+)?)\s*°?\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*°?\s*$/;
+
+// 33°02'20.4"S 71°35'58.8"W  o  33 02 20.4 S 71 35 58.8 W
+const COMP_GMS =
+  "(\\d{1,3})(?:\\s*°\\s*|\\s+)(\\d{1,2}(?:\\.\\d+)?)(?:\\s*'\\s*|\\s+)(\\d{1,2}(?:\\.\\d+)?)\\s*(?:\"|'')?\\s*";
+const RE_GRADOS_MIN_SEG = new RegExp(
+  `${COMP_GMS}([NSns])\\s*[,;\\s]*\\s*${COMP_GMS}([EWewOo])`,
+);
 
 // 33°02.34'S 71°35.98'W  o  33 02.34 S 71 35.98 W
 const RE_GRADOS_MIN =
@@ -18,7 +29,7 @@ const RE_GRADOS_MIN =
 
 // 33.039 S 71.599 W
 const RE_DECIMAL_ETIQUETADO =
-  /(\d{1,3}(?:\.\d+)?)\s*([NSns])\s*[,;\s]+(\d{1,3}(?:\.\d+)?)\s*([EWewOo])/;
+  /(\d{1,3}(?:\.\d+)?)\s*°?\s*([NSns])\s*[,;\s]+(\d{1,3}(?:\.\d+)?)\s*°?\s*([EWewOo])/;
 
 function signoLat(letra: string): number {
   return letra.toUpperCase() === "S" ? -1 : 1;
@@ -30,14 +41,40 @@ function signoLon(letra: string): number {
   return u === "W" || u === "O" ? -1 : 1;
 }
 
-/** Convierte grados + minutos decimales a grados decimales. */
-function gradosMinADecimal(grados: number, minutos: number): number {
-  return grados + minutos / 60;
+/** Convierte grados + minutos (+ segundos) decimales a grados decimales. */
+function gradosMinADecimal(grados: number, minutos: number, segundos = 0): number {
+  return grados + minutos / 60 + segundos / 3600;
+}
+
+/**
+ * Normaliza lo que llega pegado de WhatsApp/Word/teclado iOS: variantes del
+ * símbolo de grado, comillas tipográficas y coma decimal.
+ */
+export function normalizarCoordenada(input: string): string {
+  let t = input
+    .replace(/[º˚]/g, "°")
+    .replace(/[’‘´`′]/g, "'")
+    .replace(/[″“”]/g, '"')
+    .trim();
+  // Coma decimal: solo si no hay puntos (si hay puntos, la coma separa lat/lon)
+  if (!t.includes(".")) t = t.replace(/(\d),(\d)/g, "$1.$2");
+  return t;
 }
 
 export function parsearCoordenada(input: string): ResultadoParser {
-  const trim = input.trim();
+  const trim = normalizarCoordenada(input);
   if (!trim) return { ok: false, error: "Vacío" };
+
+  // 0. Grados/minutos/segundos con etiqueta N/S/E/W
+  const m0 = trim.match(RE_GRADOS_MIN_SEG);
+  if (m0) {
+    const [latMin, latSeg, lonMin, lonSeg] = [m0[2], m0[3], m0[6], m0[7]].map(parseFloat);
+    if (latMin < 60 && latSeg < 60 && lonMin < 60 && lonSeg < 60) {
+      const lat = signoLat(m0[4]) * gradosMinADecimal(parseFloat(m0[1]), latMin, latSeg);
+      const lon = signoLon(m0[8]) * gradosMinADecimal(parseFloat(m0[5]), lonMin, lonSeg);
+      if (validarRango(lat, lon)) return { ok: true, lat, lon };
+    }
+  }
 
   // 1. Grados/minutos con etiqueta N/S/E/W (formato náutico)
   const m1 = trim.match(RE_GRADOS_MIN);
@@ -68,7 +105,7 @@ export function parsearCoordenada(input: string): ResultadoParser {
   return {
     ok: false,
     error:
-      "Formato no reconocido. Probá: '33°02.34'S 71°35.98'W' o '-33.039, -71.599'",
+      "Formato no reconocido. Prueba: '33°02.34'S 71°35.98'W' o '-33.039, -71.599'",
   };
 }
 

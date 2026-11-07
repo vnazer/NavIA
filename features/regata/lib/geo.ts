@@ -22,16 +22,22 @@ export function distanciaMetros(
 }
 
 /** Suma de distancias punto a punto a lo largo del track, en metros. */
+/** Puntos con precisión peor que esto (m) no suman distancia (saltos de GPS). */
+export const PRECISION_MAX_DISTANCIA_M = 25;
+
 export function distanciaTotalTrack(puntos: PuntoTrack[]): number {
   if (puntos.length < 2) return 0;
   let total = 0;
-  for (let i = 1; i < puntos.length; i++) {
-    total += distanciaMetros(
-      puntos[i - 1].lat,
-      puntos[i - 1].lon,
-      puntos[i].lat,
-      puntos[i].lon,
-    );
+  let anterior: PuntoTrack | null = null;
+  for (const p of puntos) {
+    // Descarta fixes imprecisos: el "zigzag" del ruido infla la distancia
+    if (p.precisionMetros != null && p.precisionMetros > PRECISION_MAX_DISTANCIA_M) {
+      continue;
+    }
+    if (anterior) {
+      total += distanciaMetros(anterior.lat, anterior.lon, p.lat, p.lon);
+    }
+    anterior = p;
   }
   return total;
 }
