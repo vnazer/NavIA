@@ -71,15 +71,30 @@ final class GPSManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             // Descarta lecturas sin precisión o demasiado ruidosas para táctica.
             guard loc.horizontalAccuracy >= 0, loc.horizontalAccuracy < 25 else { continue }
 
-            let sog = max(loc.speed, 0) * Nautica.msANudos
+            // Si el chip no entrega velocidad/rumbo (señal débil), se derivan de la
+            // posición anterior.
+            var velocidad = loc.speed
+            var rumbo = loc.course
+            var velocidadFiable = loc.speedAccuracy >= 0 && loc.speedAccuracy < 1.5
+            if let previa = ultimaUbicacion, velocidad < 0 || rumbo < 0 {
+                let dt = loc.timestamp.timeIntervalSince(previa.timestamp)
+                if dt >= 0.5 && dt <= 10 {
+                    let distancia = loc.distance(from: previa)
+                    if velocidad < 0 { velocidad = distancia / dt }
+                    if rumbo < 0, distancia >= 2 { rumbo = Nautica.rumbo(desde: previa.coordinate, hasta: loc.coordinate) }
+                    velocidadFiable = false
+                }
+            }
+
+            let sog = max(velocidad, 0) * Nautica.msANudos
             sogNudos = sog
-            if sog > sogMaxNudos, loc.speedAccuracy >= 0, loc.speedAccuracy < 1.5 {
+            if sog > sogMaxNudos, velocidadFiable {
                 sogMaxNudos = sog
             }
 
             // El rumbo del GPS no sirve con el bote casi detenido.
-            if loc.course >= 0, sog >= 0.6 {
-                muestrasCog.append((loc.timestamp, loc.course))
+            if rumbo >= 0, sog >= 0.6 {
+                muestrasCog.append((loc.timestamp, rumbo))
             }
             muestrasCog.removeAll { loc.timestamp.timeIntervalSince($0.fecha) > ventanaCog }
             cog = Nautica.mediaCircular(muestrasCog.map(\.rumbo))

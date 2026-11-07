@@ -2,7 +2,12 @@ import SwiftUI
 
 /// Pantallas deslizables: Salida · Velocidad · Borneo · Viento · Sesión.
 struct MainTabView: View {
+    // En depuración, `-pestana N` al lanzar abre directo esa pantalla.
+    #if DEBUG
+    @State private var pestana = UserDefaults.standard.integer(forKey: "pestana")
+    #else
     @State private var pestana = 0
+    #endif
 
     var body: some View {
         TabView(selection: $pestana) {

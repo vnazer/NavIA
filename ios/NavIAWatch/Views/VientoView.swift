@@ -12,7 +12,7 @@ struct VientoView: View {
                 Cabecera(titulo: "VIENTO", detalle: tactica.fuente?.rawValue)
 
                 HStack(spacing: 8) {
-                    Image(systemName: "location.north.fill")
+                    Image(systemName: "arrow.up")
                         // La flecha indica hacia dónde sopla (desde TWD, a TWD+180).
                         .rotationEffect(.degrees((tactica.twdReferencia ?? 0) + 180))
                         .font(.system(size: 26))
